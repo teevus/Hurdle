@@ -24,7 +24,8 @@ type Guesses = [Guess]
 type Hint = String
 type Hints = [Hint]
 
-data Result = Correct | PartlyCorrect | Incorrect | None
+data Result = Correct | PartlyCorrect | Incorrect | None 
+    deriving (Eq, Show)
 
 -- Indicates a position on the screen
 type Point = (Int, Int)
@@ -38,11 +39,11 @@ data Config = Config {
     incorrectColor     :: Color,
     answer             :: Answer,
     allowedAnswers     :: [Answer]  --  The set of words that will be considered valid guesses
-}
+} deriving Show
 
 data Game = Game {
     guesses          :: Guesses,    
     hints            :: Hints,     -- Hints to display
     showInstructions :: Bool,      -- Whether to display instructions on screen can be toggled on/off by the player
     showHints        :: Bool       -- Whether to display hints on screen can be toggled on/off by the player
-}
+} deriving Show

@@ -89,6 +89,7 @@ renderHints :: Hints -> IO ()
 renderHints xs = do
     putStr "HINTS:  "
     mapM_ renderHint xs
+    putStrLn ""
 
 -- Renders a 3x3 block at the specified point, with a char in the center, and the specified foreground and background color  
 renderBlock :: Point -> Char -> Color -> Color -> IO ()
@@ -134,6 +135,6 @@ renderBoard p g c = do
 renderGame :: Game -> Config -> IO ()
 renderGame g c = do
     clearScreen
-    renderBoard (10,10) g c
+    -- renderBoard (10,10) g c
     when (showInstructions g) $ renderInstructions c
     when (showHints g) $ renderHints (hints g)
