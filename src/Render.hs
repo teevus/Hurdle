@@ -51,8 +51,8 @@ putStrWithColor str fg bg = do
 renderHeader :: IO ()
 renderHeader = do
     putStrLn   "--------------------------------------------------------------------------------------------------"
-    putStrLn   "HURDLE:  Haskell version of WORDLE, the addictive game by Josh Wardle."
-    putStrLn   "         Available at https://www.nytimes.com/games/wordle"
+    putStrLn   "HURDLE:  Haskell version of WORDLE: the addictive word guessing game by Josh Wardle."
+    putStrLn   "         Original game available at https://www.nytimes.com/games/wordle"
     putStrLn   "--------------------------------------------------------------------------------------------------"
 
 renderInstructions :: Config -> IO ()
@@ -122,7 +122,7 @@ renderRow p cfg [] s = renderRow p cfg emptyGuess s
 renderRow (x,y) cfg g s = do
     mapM_ (\(i, gc) -> renderGuess (x, y + i*6) cfg gc) (zip [0..] g)     -- using zip with infinite list allows us to use the index in the lambda
     setCursorPosition (x+1) (y+32)
-    putStr s
+    putStr s -- Displays the help text to the right of the row
 
 -- MO TODO: create mapM_withIndex function as I've had to do the zip technique twice
 
@@ -160,7 +160,7 @@ renderGame g c = do
     setCursorPosition (5 + maxGuesses c * 4) 0
     when (showInstructions g) $ renderInstructions c
     when (showHints g) $ renderHints (hints g)
-    when (showDebug c) $ print g
+    when (showDebug c) $ renderDebug g c
 
 -- Renders the Loading screen at the start of the game
 renderLoading :: Config -> Bool -> IO ()
@@ -175,9 +175,13 @@ renderLoading c b = do
 renderOver :: Game -> IO Bool
 renderOver g = do
     let winner = wonGame g
-    when winner $ putStrLn ("CONGRATULATIONS: You won in " ++ show (guessCount g) ++ " attempts!")
+    when winner $ putStrLn ("CONGRATULATIONS: You won in " ++ show (submittedGuessCount g) ++ " attempts!")
 
     putStrLn "Would you like to play again? (Y/N)"
     c <- getChar
     return $ c == 'y' || c == 'Y'
 
+renderDebug :: Game -> Config -> IO ()
+renderDebug g c = do
+    print g
+    print c

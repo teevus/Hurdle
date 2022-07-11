@@ -10,7 +10,7 @@ module Game (
     wonGame,
     gameOver,
     toWord,
-    guessCount,
+    submittedGuessCount,
     currentGuess,
     addLetter,
     removeLetter,
@@ -26,20 +26,25 @@ submittedGuesses :: Game -> [Guess]
 submittedGuesses g = filter isSubmitted (guesses g)
 
 -- Retrieves the number of guesses that have been submitted
-guessCount :: Game -> Int
-guessCount g = length $ submittedGuesses g
+submittedGuessCount :: Game -> Int
+submittedGuessCount g = length $ submittedGuesses g
+
+-- Retrieves the (zero-based) index of the current row being guessed
+currentGuessIndex :: Game -> Int
+currentGuessIndex g = if gc == 0 then 0 else gc - 1
+    where gc = length $ guesses g
 
 currentGuess :: Game -> Guess
 currentGuess g = last $ guesses g
 
 -- Determines whether a particular guess has been submitted
 isSubmitted :: Guess -> Bool
-isSubmitted g = (length g) == 5 && all (\(_,r) -> r /= None) g
+isSubmitted g = length g == 5 && all (\(_,r) -> r /= None) g
 
 -- Determines whether the game is finished (i.e. maximum number of guesses have been submitted)
 -- This will return true if the game is finished regardless of whether the game was won or lost
 gameOver :: Game -> Config -> Bool
-gameOver g c = (guessCount g) >= (maxGuesses c) || any (winningGuess (answer g)) (guesses g)
+gameOver g c = submittedGuessCount g >= maxGuesses c || any (winningGuess (answer g)) (guesses g)
 
 -- Determines whether the player has won the game
 wonGame :: Game -> Bool
@@ -55,7 +60,7 @@ toWord g = map fst g
 
 -- Adds a letter to the current guess and returns a list containing the guesses
 addLetter :: Game -> Char -> Guesses
-addLetter game c = replaceElem gs (guessCount game) modifiedGuess
+addLetter game c = replaceElem gs (currentGuessIndex game) modifiedGuess
     where gs = guesses game
           currGuess = currentGuess game
           modifiedGuess = addLetterToGuess currGuess c
@@ -68,7 +73,7 @@ addLetterToGuess g c = if length g < 5 then g ++ [(c, None)] else g
 -- Returns a list of guesses, which contains the existing guesses, but with the last letter removed
 -- Note: the last letter can only be removed if the guess has not been submitted yet (i.e. Result will be None)
 removeLetter :: Game -> Guesses
-removeLetter game = replaceElem gs (guessCount game) modifiedGuess
+removeLetter game = replaceElem gs (currentGuessIndex game) modifiedGuess
     where gs = guesses game
           currGuess = currentGuess game
           modifiedGuess = removeLetterFromGuess currGuess

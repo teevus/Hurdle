@@ -87,7 +87,7 @@ initializeConfig vg pa = Config { maxGuesses = 6,
                                   backgroundColor = White,
                                   correctColor = Green,
                                   partlyCorrectColor = Yellow,
-                                  incorrectColor = White,
+                                  incorrectColor = Blue,
                                   validGuesses = vg,
                                   possibleAnswers = pa,
                                   showDebug = True }
