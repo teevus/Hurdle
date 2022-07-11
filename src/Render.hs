@@ -1,11 +1,22 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
+
 module Render (
-    renderGame
+    renderLoading,
+    renderGame,
+    renderOver
  ) where
 
 import Data.Char
 import System.Console.ANSI
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Reader
+import Control.Monad.State
+
 import Data
+import Game
+import Utils
 
 -- Utility functions for rendering
 
@@ -37,27 +48,18 @@ putStrWithColor str fg bg = do
     putStr str
     setSGR [Reset]
 
-writeNumber :: Int -> String
-writeNumber 1 = "one"
-writeNumber 2 = "two"
-writeNumber 3 = "three"
-writeNumber 4 = "four"
-writeNumber 5 = "five"
-writeNumber 6 = "six"
-writeNumber 7 = "seven"
-writeNumber 8 = "eight"
-writeNumber 9 = "nine"
-writeNumber 10 = "ten"
-writeNumber n = show n
+renderHeader :: IO ()
+renderHeader = do
+    putStrLn   "--------------------------------------------------------------------------------------------------"
+    putStrLn   "HURDLE:  Haskell version of WORDLE, the addictive game by Josh Wardle."
+    putStrLn   "         Available at https://www.nytimes.com/games/wordle"
+    putStrLn   "--------------------------------------------------------------------------------------------------"
 
 renderInstructions :: Config -> IO ()
 renderInstructions c = do
-    putStrLn   "--------------------------------------------------------------------------------------------------"
-    putStrLn   "HURDLE:  Haskell version of WORDLE, the addictive game by Josh Wardle."
-    putStrLn   "Available at https://www.nytimes.com/games/wordle"
-    putStrLn   "--------------------------------------------------------------------------------------------------"
+    putStrLn   "INSTRUCTIONS:"
     putStrLn   ""
-    putStrLn $ "Guess the WORD in " ++ writeNumber (guessCount c) ++ " tries"
+    putStrLn $ "Guess the WORD in " ++ showNumberText (maxGuesses c) ++ " tries"
     putStrLn   "Each guess must be a valid five-letter word. Hit the enter button to submit."
     putStrLn   "After each guess, the color of the tiles will change to show how close your guess was to the word."
     putStrLn   ""
@@ -95,46 +97,79 @@ renderHints xs = do
 renderBlock :: Point -> Char -> Color -> Color -> IO ()
 renderBlock (x,y) c fg bg = do
     setCursorPosition x y
-    putStrWithColor "   " fg bg
+    putStrWithColor "     " fg bg
     setCursorPosition (x+1) y
-    putStrWithColor [' ', c, ' '] fg bg
+    putStrWithColor [' ', ' ', c, ' ', ' '] fg bg   -- MO TODO: Improve this!
     setCursorPosition (x+2) y
-    putStrWithColor "   " fg bg
+    putStrWithColor "     " fg bg
 
 -- Renders the guess at the specified point
 renderGuess :: Point -> Config -> GuessChar -> IO ()
-renderGuess (x, y) cfg (c, r) = do
+renderGuess p cfg (c, r) = do
     let fg = fgColorForResult cfg r
     let bg = bgColorForResult cfg r
-    return ()
+    renderBlock p c fg bg 
 
+{- MO TODO: Not required any more
 renderEmptyRow :: Point -> Config -> IO ()
 renderEmptyRow p cfg = do
-    renderGuess p cfg (' ', None) 
+    renderRow p cfg emptyGuess ""
+-}
 
-renderRow :: Point -> Config -> Guess -> IO ()
-renderRow p cfg [] = renderEmptyRow p cfg
-renderRow (x,y) cfg [gc] = do
-    mapM_ (\i -> renderGuess (x + i*4, y) cfg gc) [0..2] 
+renderRow :: Point -> Config -> Guess -> String -> IO ()
+renderRow p cfg [] s = renderRow p cfg emptyGuess s
+renderRow (x,y) cfg g s = do
+    mapM_ (\(i, gc) -> renderGuess (x, y + i*4) cfg gc) (zip [0..] g)     -- using zip with infinite list allows us to use the index in the lambda
+    putStr s
 
+-- MO TODO: create mapM_withIndex function as I've had to do the zip technique twice
+
+emptyGuess :: Guess
+emptyGuess = replicate 5 (' ', None)
 
 -- Creates the specified number of empty guesses
 -- Each guess contains 5 letters
 emptyGuesses :: Int -> Guesses
 emptyGuesses 0 = []
-emptyGuesses n = replicate n $ replicate 5 (' ', None)
+emptyGuesses n = replicate n emptyGuess
 
 -- Renders the game board at the specified point
 renderBoard :: Point -> Game -> Config -> IO ()
-renderBoard p g c = do
-    let gc = guessCount c
+renderBoard (x,y) g c = do
+    let help = helpText g
+    let gc = maxGuesses c
     let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
-    mapM_ (renderRow p c) gs
+    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess help) (zip [0..] gs) 
+-- MO TODO: create mapM_withIndex function
 
--- This is the main rendering function that gets called each time the game state has changed
+
+-- Renders the game as per the current game state
 renderGame :: Game -> Config -> IO ()
 renderGame g c = do
     clearScreen
-    -- renderBoard (10,10) g c
+    setCursorPosition 0 0
+    renderHeader
+    renderBoard (5,10) g c
+    setCursorPosition (5 + maxGuesses c * 4) 0
     when (showInstructions g) $ renderInstructions c
     when (showHints g) $ renderHints (hints g)
+
+-- Renders the Loading screen at the start of the game
+renderLoading :: Config -> Bool -> IO ()
+renderLoading c b = do
+    clearScreen
+    setCursorPosition 0 0
+    renderHeader
+    renderInstructions c
+    if b then putStrLn "Loading..." else putStrLn "Press ENTER to start"
+
+
+renderOver :: Game -> IO Bool
+renderOver g = do
+    let winner = wonGame g 
+    when winner $ putStrLn ("CONGRATULATIONS: You won in " ++ show (guessCount g) ++ " attempts!")
+
+    putStrLn "Would you like to play again? (Y/N)"
+    c <- getChar
+    return $ c == 'y' || c == 'Y'
+

@@ -1,14 +1,21 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Main where
 
-import System.Random
+import Control.Concurrent
 import Control.Monad.Reader
 import Control.Monad.State
-import System.Console.ANSI
+    ( execState, MonadState(put, get), State, StateT(runStateT) )
 import Data.List
+import Data.Char
+import System.Console.ANSI
+import System.IO
+import System.Random
 
 import Data
 import Render
 import Utils
+import Game
 
 
 -- Pure functions
@@ -53,44 +60,120 @@ loadPossibleAnswers :: IO [Answer]
 loadPossibleAnswers = do
     return ["TESTS", "TANKS", "TUBBY", "TOOLS"]  -- TODO: Load from file
 
-loadAllowedGuesses :: IO [Answer]
-loadAllowedGuesses = do
-    return ["TESTS", "TANKS", "TUBBY", "REALM", "RESTS"] -- TODO: Load from file
+loadValidGuesses :: IO [Answer]
+loadValidGuesses = do
+    possibleAnswers <- loadPossibleAnswers
+    return $ ["REALM", "RESTS", "WEIRD"]  ++ possibleAnswers -- TODO: Load from file
 
 selectRandomAnswer :: [Answer] -> IO Answer
 selectRandomAnswer xs = do
     gen <- getStdGen
     return $ selectRandomItem gen xs
 
-initializeConfig :: Answer -> [Answer] -> Config
-initializeConfig a aa = Config { guessCount = 6, 
-                                 hintCount = 5,
-                                 backgroundColor = Blue,
-                                 correctColor = Green,
-                                 partlyCorrectColor = Yellow,
-                                 incorrectColor = White,
-                                 answer = a,
-                                 allowedAnswers = aa }
+initializeConfig :: [Answer] -> [Answer] -> Config
+initializeConfig vg pa = Config { maxGuesses = 6, 
+                                  hintCount = 5,
+                                  backgroundColor = White,
+                                  correctColor = Green,
+                                  partlyCorrectColor = Yellow,
+                                  incorrectColor = White,
+                                  validGuesses = vg,
+                                  possibleAnswers = pa }
 
-initializeGame :: Game
-initializeGame = Game { guesses = [], 
-                        showInstructions = True, 
-                        showHints = True,
-                        hints = [] }
-
-
+initializeGame :: Answer -> Game
+initializeGame a = Game { answer = a, 
+                          guesses = [[]],      -- a list containing a single empty item 
+                          showInstructions = True, 
+                          showHints = False,
+                          hints = [],
+                          helpText = "Enter a 5 letter word (or hit Space to Show/Hide HINTS)" }
 
 -- MAIN
-main :: IO ()
+main :: IO ((), Game)
 main = do
+    hSetBuffering stdin NoBuffering
+    hSetBuffering stdout NoBuffering
+
+    -- Need some basic config to render the loading screen with the instructions
+    let tempConfig = initializeConfig [] []
+    renderLoading tempConfig True
+
     possibleAnswers <- loadPossibleAnswers
     answer <- selectRandomAnswer possibleAnswers 
-    allowedGuesses <- loadAllowedGuesses
+    validGuesses <- loadValidGuesses
 
-    let config = initializeConfig answer allowedGuesses
-    let game = initializeGame
+    let config = initializeConfig validGuesses possibleAnswers
+    let game = initializeGame answer
 
-    renderGame game config
+    threadDelay 1000000 -- Sleep for 1 second MO TODO: Remove once I've tested with actual loading of files
 
-    -- MO TODO: Accept user input and process main loop 
-    putStrLn $ "ANSWER: " ++ answer
+    renderLoading config False
+    getLine
+
+    runStateT (runReaderT playGame config) game
+
+toggleHintsM :: MonadState Game m => m ()
+toggleHintsM = do
+    game <- get
+    let currentValue = showHints game
+    put (game { showHints = not currentValue })
+
+toggleInstructionsM :: MonadState Game m => m ()
+toggleInstructionsM = do
+    game <- get
+    let currentValue = showInstructions game
+    put (game { showInstructions = not currentValue })
+
+addLetterM :: MonadState Game m => Char -> m ()
+addLetterM c = do
+    game <- get
+    let modifiedGuesses = addLetter game c
+    put (game { guesses = modifiedGuesses })
+
+removeLetterM :: MonadState Game m => Char -> m ()
+removeLetterM c = do
+    game <- get
+    let modifiedGuesses = removeLetter game
+    put (game { guesses = modifiedGuesses })
+
+evaluateGuessesM :: MonadState Game m => m ()
+evaluateGuessesM = do
+    game <- get
+    let modifiedGuesses = evaluateGuesses game 
+    put (game { guesses = modifiedGuesses })
+
+processUserInputM :: ReaderT Config (StateT Game IO) Bool
+processUserInputM = do
+    config <- ask
+    game <- get
+    let currGuess = currentGuess game
+    let guessIsFinished = length currGuess == 5 -- Current guess has all letters
+    if guessIsFinished then do
+        liftIO getLine
+        evaluateGuessesM
+    else do
+        c <- liftIO getChar
+        when c == ' ' $ toggleHintsM
+        when c == '!' $ toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
+        when c `elem` ['a'..'z'] ++ ['A'..'Z'] $ addLetterM (toUpper c)
+        when c == '-' $ removeLetterM
+-- MO TODO: Accept backspace character to delete
+
+-- This is the main rendering function that gets called each time the game state has changed
+renderGameM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
+renderGameM = do
+  config <- ask
+  game <- get
+  liftIO $ renderGame game config 
+
+
+-- This is the main game loop
+playGame :: ReaderT Config (StateT Game IO) ()
+playGame = forever $ do
+    renderGameM
+    finished <- processUserInputM
+    if finished then 
+        return renderOver
+    else 
+        renderGameM
+    return True
