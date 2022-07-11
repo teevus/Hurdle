@@ -130,31 +130,29 @@ renderGameM = do
 
 processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
 processUserInputM = do
-    config <- ask
+    -- config <- ask
     game <- get
     let currGuess = currentGuess game
     let guessIsFinished = length currGuess == 5
 
     if guessIsFinished then do
-        line <- liftIO getLine
+        liftIO getLine
         return ()
-        -- isGameOver <- evaluateGuessesM
-        -- return isGameOver
     else do
         c <- liftIO getChar
-        liftIO (putStrLn $ show c)
+        --liftIO (putStrLn $ show c)
         -- return ()
-        {-
+
         if c == ' ' then toggleHintsM
         else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
         else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
         else if c == '-' then removeLetterM
-        else return True -- still awaiting further user input
-        -}
-    -- return True
+        else return () -- still awaiting further user input  -- MO TODO: Use "when"
+
+        -- return True
     -- MO TODO: Accept backspace character for delete
 
-{-
+
 toggleHintsM :: MonadState Game m => m ()
 toggleHintsM = do
     game <- get
@@ -173,48 +171,24 @@ addLetterM c = do
     let modifiedGuesses = addLetter game c
     put (game { guesses = modifiedGuesses })
 
-removeLetterM :: MonadState Game m => Char -> m ()
-removeLetterM c = do
+removeLetterM :: MonadState Game m => m ()
+removeLetterM = do
     game <- get
     let modifiedGuesses = removeLetter game
     put (game { guesses = modifiedGuesses })
 
-evaluateGuessesM :: MonadState Game m => m Bool
+evaluateGuessesM :: (MonadReader Config m, MonadState Game m)=> m Bool
 evaluateGuessesM = do
     game <- get
+    config <- ask
     let modifiedGuesses = evaluateGuesses game 
     put (game { guesses = modifiedGuesses })
-    return $ gameOver game
+    let isGameOver = gameOver game config 
+    return isGameOver
 
 currentGuessIsFinished :: MonadState Game m => m Bool
 currentGuessIsFinished = do
     game <- get
     let currGuess = currentGuess game
-    return length currGuess == 5 -- Current guess has all letters -- MO TODO; Move this game logic into Game.hs
-
-processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
-processUserInputM = do
-    -- config <- ask
-    -- game <- get
-    guessIsFinished <- currentGuessIsFinished
-
-    if guessIsFinished then do
-        liftIO getLine
-        isGameOver <- evaluateGuessesM
-        return isGameOver
-    else do
-        c <- liftIO getChar
-        if c == ' ' then toggleHintsM
-        else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
-        else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
-        else if c == '-' then removeLetterM
-        else return True -- still awaiting further user input
-
-        return True
-    -- MO TODO: Accept backspace character for delete
-
-
-
-
-
--}
+    let isFinished = length currGuess == 5 -- Current guess has all letters -- MO TODO; Move this game logic into Game.hs
+    return isFinished
