@@ -44,6 +44,10 @@ maintainer:
 -- Extra files to be distributed with the package, such as examples or a README.
 extra-source-files: CHANGELOG.md, README.md
 
+data-dir: data
+
+data-files: allwords.txt, solutions.txt
+
 executable Hurdle
     -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
@@ -61,7 +65,8 @@ executable Hurdle
     build-depends:  base ^>=4.14.3.0, 
                     ansi-terminal, 
                     random,
-                    mtl
+                    mtl,
+                    split
 
     -- Directories containing source files.
     hs-source-dirs:   src

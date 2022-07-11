@@ -11,6 +11,7 @@ import Control.Monad.Reader
 import Control.Monad.State
     ( execState, MonadState(put, get), State, StateT(runStateT) )
 import Data.List
+-- import Data.List.Split
 import Data.Char
 import System.Console.ANSI
 import System.IO
@@ -62,12 +63,17 @@ randomHints n nmax g a = do
 
 loadPossibleAnswers :: IO [Answer]
 loadPossibleAnswers = do
-    return ["TESTS", "TANKS", "TUBBY", "TOOLS"]  -- TODO: Load from file
+    contents <- readFile "data/solutions.txt"
+    let answers = map (map toUpper) (words contents)
+    return answers
+-- return ["TESTS", "TANKS", "TUBBY", "TOOLS"]  --For testing
 
 loadValidGuesses :: IO [Answer]
 loadValidGuesses = do
-    possibleAnswers <- loadPossibleAnswers
-    return $ ["REALM", "RESTS", "WEIRD"]  ++ possibleAnswers -- TODO: Load from file
+    contents <- readFile "data/allwords.txt"
+    let answers = map (map toUpper) (words contents)
+    return answers
+-- return $ ["REALM", "RESTS", "WEIRD"]  ++ possibleAnswers --For testing
 
 selectRandomAnswer :: [Answer] -> IO Answer
 selectRandomAnswer xs = do
@@ -83,12 +89,13 @@ initializeConfig vg pa = Config { maxGuesses = 6,
                                   partlyCorrectColor = Yellow,
                                   incorrectColor = White,
                                   validGuesses = vg,
-                                  possibleAnswers = pa }
+                                  possibleAnswers = pa,
+                                  showDebug = True }
 
 initializeGame :: Answer -> Game
 initializeGame a = Game { answer = a, 
                           guesses = [[]],      -- a list containing a single empty item 
-                          showInstructions = True, 
+                          showInstructions = False, 
                           showHints = False,
                           hints = [],
                           helpText = "Enter a 5 letter word (or hit Space to Show/Hide HINTS)" }
@@ -110,7 +117,7 @@ main = do
     let config = initializeConfig validGuesses possibleAnswers
     let game = initializeGame answer
 
-    threadDelay 1000000 -- Sleep for 1 second MO TODO: Remove once I've tested with actual loading of files
+    -- threadDelay 500000 -- Sleep for half a second
 
     renderLoading config False
     getLine
@@ -144,9 +151,6 @@ processUserInputM = do
         return ()
     else do
         c <- liftIO getChar
-        --liftIO (putStrLn $ show c)
-        -- return ()
-
         if c == ' ' then toggleHintsM
         else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
         else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)

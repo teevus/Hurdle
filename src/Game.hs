@@ -19,7 +19,7 @@ module Game (
 ) where
 
 import Data
-import Utils
+import Utils 
 
 -- Returns the guesses that have been submitted
 submittedGuesses :: Game -> [Guess]

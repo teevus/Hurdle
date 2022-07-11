@@ -40,7 +40,8 @@ data Config = Config {
     partlyCorrectColor :: Color,    -- the background color for partly correct letters
     incorrectColor     :: Color,    -- the background color for incorrect letters
     validGuesses       :: [String], -- The set of words that will be considered valid guesses
-    possibleAnswers    :: [Answer]  -- The set of words that could be possible answers (a subset of validGuesses)
+    possibleAnswers    :: [Answer], -- The set of words that could be possible answers (a subset of validGuesses)
+    showDebug          :: Bool      -- When true, debug values will be displayed during rendering
 } deriving Show
 
 data Game = Game {

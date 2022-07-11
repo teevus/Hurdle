@@ -115,7 +115,7 @@ renderGuess :: Point -> Config -> GuessChar -> IO ()
 renderGuess p cfg (c, r) = do
     let fg = fgColorForResult cfg r
     let bg = bgColorForResult cfg r
-    renderBlock p c fg bg 
+    renderBlock p c fg bg
 
 renderRow :: Point -> Config -> Guess -> String -> IO ()
 renderRow p cfg [] s = renderRow p cfg emptyGuess s
@@ -137,8 +137,8 @@ emptyGuesses n = replicate n emptyGuess
 
 helpTextForRow :: Game -> Int -> String
 helpTextForRow g i =
-    if i == (length gs - 1) then help else "" 
-    where gs = guesses g 
+    if i == (length gs - 1) then help else ""
+    where gs = guesses g
           help = helpText g
 
 -- Renders the game board at the specified point
@@ -147,9 +147,8 @@ renderBoard (x,y) g c = do
 
     let gc = maxGuesses c
     let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
-    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g i)) (zip [0..] gs) 
+    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g i)) (zip [0..] gs)
 -- MO TODO: create mapM_withIndex function
-
 
 -- Renders the game as per the current game state
 renderGame :: Game -> Config -> IO ()
@@ -161,6 +160,7 @@ renderGame g c = do
     setCursorPosition (5 + maxGuesses c * 4) 0
     when (showInstructions g) $ renderInstructions c
     when (showHints g) $ renderHints (hints g)
+    when (showDebug c) $ print g
 
 -- Renders the Loading screen at the start of the game
 renderLoading :: Config -> Bool -> IO ()
@@ -174,7 +174,7 @@ renderLoading c b = do
 
 renderOver :: Game -> IO Bool
 renderOver g = do
-    let winner = wonGame g 
+    let winner = wonGame g
     when winner $ putStrLn ("CONGRATULATIONS: You won in " ++ show (guessCount g) ++ " attempts!")
 
     putStrLn "Would you like to play again? (Y/N)"
