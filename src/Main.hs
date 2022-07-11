@@ -1,8 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use print" #-}
 
 module Main where
 
 import Control.Concurrent
+import Control.Monad.Except -- MO TODO: Not sure if I need this, but its in the snake project
 import Control.Monad.Reader
 import Control.Monad.State
     ( execState, MonadState(put, get), State, StateT(runStateT) )
@@ -112,6 +115,46 @@ main = do
 
     runStateT (runReaderT playGame config) game
 
+-- This is the main game loop
+playGame :: ReaderT Config (StateT Game IO) ()
+playGame = forever $ do
+    renderGameM
+    processUserInputM
+
+-- This is the main rendering function that gets called each time the game state has changed
+renderGameM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
+renderGameM = do
+    game <- get
+    config <- ask
+    liftIO $ renderGame game config 
+
+processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
+processUserInputM = do
+    config <- ask
+    game <- get
+    let currGuess = currentGuess game
+    let guessIsFinished = length currGuess == 5
+
+    if guessIsFinished then do
+        line <- liftIO getLine
+        return ()
+        -- isGameOver <- evaluateGuessesM
+        -- return isGameOver
+    else do
+        c <- liftIO getChar
+        liftIO (putStrLn $ show c)
+        -- return ()
+        {-
+        if c == ' ' then toggleHintsM
+        else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
+        else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
+        else if c == '-' then removeLetterM
+        else return True -- still awaiting further user input
+        -}
+    -- return True
+    -- MO TODO: Accept backspace character for delete
+
+{-
 toggleHintsM :: MonadState Game m => m ()
 toggleHintsM = do
     game <- get
@@ -136,44 +179,42 @@ removeLetterM c = do
     let modifiedGuesses = removeLetter game
     put (game { guesses = modifiedGuesses })
 
-evaluateGuessesM :: MonadState Game m => m ()
+evaluateGuessesM :: MonadState Game m => m Bool
 evaluateGuessesM = do
     game <- get
     let modifiedGuesses = evaluateGuesses game 
     put (game { guesses = modifiedGuesses })
+    return $ gameOver game
 
-processUserInputM :: ReaderT Config (StateT Game IO) Bool
-processUserInputM = do
-    config <- ask
+currentGuessIsFinished :: MonadState Game m => m Bool
+currentGuessIsFinished = do
     game <- get
     let currGuess = currentGuess game
-    let guessIsFinished = length currGuess == 5 -- Current guess has all letters
+    return length currGuess == 5 -- Current guess has all letters -- MO TODO; Move this game logic into Game.hs
+
+processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
+processUserInputM = do
+    -- config <- ask
+    -- game <- get
+    guessIsFinished <- currentGuessIsFinished
+
     if guessIsFinished then do
         liftIO getLine
-        evaluateGuessesM
+        isGameOver <- evaluateGuessesM
+        return isGameOver
     else do
         c <- liftIO getChar
-        when c == ' ' $ toggleHintsM
-        when c == '!' $ toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
-        when c `elem` ['a'..'z'] ++ ['A'..'Z'] $ addLetterM (toUpper c)
-        when c == '-' $ removeLetterM
--- MO TODO: Accept backspace character to delete
+        if c == ' ' then toggleHintsM
+        else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
+        else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
+        else if c == '-' then removeLetterM
+        else return True -- still awaiting further user input
 
--- This is the main rendering function that gets called each time the game state has changed
-renderGameM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
-renderGameM = do
-  config <- ask
-  game <- get
-  liftIO $ renderGame game config 
+        return True
+    -- MO TODO: Accept backspace character for delete
 
 
--- This is the main game loop
-playGame :: ReaderT Config (StateT Game IO) ()
-playGame = forever $ do
-    renderGameM
-    finished <- processUserInputM
-    if finished then 
-        return renderOver
-    else 
-        renderGameM
-    return True
+
+
+
+-}

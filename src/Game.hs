@@ -8,7 +8,7 @@ Rendering logic is in Render.hs, not in this module
 module Game (
     submittedGuesses,    
     wonGame,
-    finishedGame,
+    gameOver,
     toWord,
     guessCount,
     currentGuess,
@@ -37,8 +37,8 @@ isSubmitted g = (length g) == 5 && all (\(_,r) -> r /= None) g
 
 -- Determines whether the game is finished (i.e. maximum number of guesses have been submitted)
 -- This will return true if the game is finished regardless of whether the game was won or lost
-finishedGame :: Game -> Config -> Bool
-finishedGame g c = (guessCount g) >= (maxGuesses c) || any (winningGuess (answer g)) (guesses g) 
+gameOver :: Game -> Config -> Bool
+gameOver g c = (guessCount g) >= (maxGuesses c) || any (winningGuess (answer g)) (guesses g) 
 
 -- Determines whether the player has won the game
 wonGame :: Game -> Bool
