@@ -34,6 +34,7 @@ type Point = (Int, Int)
 data Config = Config {
     maxGuesses         :: Int,      -- Number of guesses allowed
     hintCount          :: Int,      -- Number of hints to display
+    foregroundColor    :: Color,    -- foreground color for all guess results
     backgroundColor    :: Color,    -- background color for empty or unsubmitted guesses
     correctColor       :: Color,    -- the background color for correctly guessed letters
     partlyCorrectColor :: Color,    -- the background color for partly correct letters

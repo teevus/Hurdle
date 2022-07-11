@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use print" #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Main where
 
@@ -76,6 +77,7 @@ selectRandomAnswer xs = do
 initializeConfig :: [Answer] -> [Answer] -> Config
 initializeConfig vg pa = Config { maxGuesses = 6, 
                                   hintCount = 5,
+                                  foregroundColor = Black,
                                   backgroundColor = White,
                                   correctColor = Green,
                                   partlyCorrectColor = Yellow,
@@ -137,6 +139,8 @@ processUserInputM = do
 
     if guessIsFinished then do
         liftIO getLine
+        let modifiedGuesses = startNextRow game
+        put (game { guesses = modifiedGuesses })
         return ()
     else do
         c <- liftIO getChar

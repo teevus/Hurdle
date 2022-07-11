@@ -56,26 +56,33 @@ renderHeader = do
     putStrLn   "--------------------------------------------------------------------------------------------------"
 
 renderInstructions :: Config -> IO ()
-renderInstructions c = do
+renderInstructions cfg = do
+    let fgColor = foregroundColor cfg
+    let bgColor = backgroundColor cfg
+    let corrColor = correctColor cfg
+    let incorrColor = incorrectColor cfg
+    let partlyCorrColor = partlyCorrectColor cfg
+
+    putStrLn   "--------------------------------------------------------------------------------------------------"
     putStrLn   "INSTRUCTIONS:"
     putStrLn   ""
-    putStrLn $ "Guess the WORD in " ++ showNumberText (maxGuesses c) ++ " tries"
+    putStrLn $ "Guess the WORD in " ++ showNumberText (maxGuesses cfg) ++ " tries"
     putStrLn   "Each guess must be a valid five-letter word. Hit the enter button to submit."
     putStrLn   "After each guess, the color of the tiles will change to show how close your guess was to the word."
     putStrLn   ""
     putStrLn   "Examples:"
     putStrLn   ""
-    putStrWithColor "W" Black Green
+    putStrWithColor "W" fgColor corrColor
     putStr     "EARY     "
     putStrLn   "The letter W is in the word and is in the correct spot"
     putStrLn   ""
     putStr     "P"
-    putStrWithColor "I" Black Yellow
+    putStrWithColor "I" bgColor partlyCorrColor
     putStr     "LLS     "
     putStrLn   "The letter I is in the word but in the wrong spot"
     putStrLn   ""
     putStr     "VAG"
-    putStrWithColor "U" Black White
+    putStrWithColor "U" bgColor incorrColor
     putStr     "E     "
     putStrLn   "The letter U is not in the word in any spot"
     putStrLn   ""
@@ -110,16 +117,11 @@ renderGuess p cfg (c, r) = do
     let bg = bgColorForResult cfg r
     renderBlock p c fg bg 
 
-{- MO TODO: Not required any more
-renderEmptyRow :: Point -> Config -> IO ()
-renderEmptyRow p cfg = do
-    renderRow p cfg emptyGuess ""
--}
-
 renderRow :: Point -> Config -> Guess -> String -> IO ()
 renderRow p cfg [] s = renderRow p cfg emptyGuess s
 renderRow (x,y) cfg g s = do
-    mapM_ (\(i, gc) -> renderGuess (x, y + i*4) cfg gc) (zip [0..] g)     -- using zip with infinite list allows us to use the index in the lambda
+    mapM_ (\(i, gc) -> renderGuess (x, y + i*6) cfg gc) (zip [0..] g)     -- using zip with infinite list allows us to use the index in the lambda
+    setCursorPosition (x+1) (y+32)
     putStr s
 
 -- MO TODO: create mapM_withIndex function as I've had to do the zip technique twice
@@ -133,13 +135,19 @@ emptyGuesses :: Int -> Guesses
 emptyGuesses 0 = []
 emptyGuesses n = replicate n emptyGuess
 
+helpTextForRow :: Game -> Int -> String
+helpTextForRow g i =
+    if i == (length gs - 1) then help else "" 
+    where gs = guesses g 
+          help = helpText g
+
 -- Renders the game board at the specified point
 renderBoard :: Point -> Game -> Config -> IO ()
 renderBoard (x,y) g c = do
-    let help = helpText g
+
     let gc = maxGuesses c
     let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
-    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess help) (zip [0..] gs) 
+    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g i)) (zip [0..] gs) 
 -- MO TODO: create mapM_withIndex function
 
 

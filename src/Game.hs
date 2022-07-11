@@ -6,7 +6,7 @@ This module is for (non-IO related) game logic, and should only contain pure fun
 Rendering logic is in Render.hs, not in this module
 -}
 module Game (
-    submittedGuesses,    
+    submittedGuesses,
     wonGame,
     gameOver,
     toWord,
@@ -14,7 +14,8 @@ module Game (
     currentGuess,
     addLetter,
     removeLetter,
-    evaluateGuesses
+    evaluateGuesses,
+    startNextRow
 ) where
 
 import Data
@@ -38,7 +39,7 @@ isSubmitted g = (length g) == 5 && all (\(_,r) -> r /= None) g
 -- Determines whether the game is finished (i.e. maximum number of guesses have been submitted)
 -- This will return true if the game is finished regardless of whether the game was won or lost
 gameOver :: Game -> Config -> Bool
-gameOver g c = (guessCount g) >= (maxGuesses c) || any (winningGuess (answer g)) (guesses g) 
+gameOver g c = (guessCount g) >= (maxGuesses c) || any (winningGuess (answer g)) (guesses g)
 
 -- Determines whether the player has won the game
 wonGame :: Game -> Bool
@@ -86,9 +87,12 @@ evaluateGuess :: Answer -> Guess -> Guess
 -- evaluateGuess :: Answer -> [GuessChar] -> [GuessChar]
 evaluateGuess a gcs = map (\(i,gc) -> evaluateGuessChar a i gc) (zip [0..] gcs)
 
-evaluateGuessChar :: Answer -> Int -> GuessChar -> GuessChar    -- MO TODO: Guard syntax may be more readable
-evaluateGuessChar a index (c,_) =
-    if (a !! index == c) then (c,Correct)
-    else if (c `elem` a) then (c,PartlyCorrect)
-    else (c,Incorrect)
+evaluateGuessChar :: Answer -> Int -> GuessChar -> GuessChar
+evaluateGuessChar a index (c,_)
+    | a !! index == c  = (c,Correct)
+    | c `elem` a       = (c,PartlyCorrect)
+    | otherwise        = (c,Incorrect)
 
+
+startNextRow :: Game -> Guesses
+startNextRow g = guesses g ++ [[]]
