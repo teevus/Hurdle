@@ -1,12 +1,26 @@
 module Render (
-    renderBoard,
-    renderInstructions,
-    renderHints
+    renderGame
  ) where
 
 import Data.Char
 import System.Console.ANSI
+import Control.Monad
 import Data
+
+-- Utility functions for rendering
+
+-- Returns the foreground color to use for the specified result
+fgColorForResult :: Config -> Result -> Color
+fgColorForResult c _ = backgroundColor c
+-- MO TODO: Customize background colors as required
+
+-- Returns the background color to use for the specified result
+bgColorForResult :: Config -> Result -> Color
+bgColorForResult c None = backgroundColor c
+bgColorForResult c Correct = correctColor c
+bgColorForResult c PartlyCorrect = partlyCorrectColor c
+bgColorForResult c Incorrect = incorrectColor c
+
 
 -- Renders the specified character multiple times
 -- Notes: mapM_ performs the function once per item in the list
@@ -37,13 +51,13 @@ writeNumber 10 = "ten"
 writeNumber n = show n
 
 renderInstructions :: Config -> IO ()
-renderInstructions (Config c) = do
+renderInstructions c = do
     putStrLn   "--------------------------------------------------------------------------------------------------"
     putStrLn   "HURDLE:  Haskell version of WORDLE, the addictive game by Josh Wardle."
     putStrLn   "Available at https://www.nytimes.com/games/wordle"
     putStrLn   "--------------------------------------------------------------------------------------------------"
     putStrLn   ""
-    putStrLn $ "Guess the WORD in " ++ writeNumber c ++ " tries"
+    putStrLn $ "Guess the WORD in " ++ writeNumber (guessCount c) ++ " tries"
     putStrLn   "Each guess must be a valid five-letter word. Hit the enter button to submit."
     putStrLn   "After each guess, the color of the tiles will change to show how close your guess was to the word."
     putStrLn   ""
@@ -76,26 +90,50 @@ renderHints xs = do
     putStr "HINTS:  "
     mapM_ renderHint xs
 
--- Renders a horizontal line starting at the current cursor position
-renderHorizontalLine :: Int -> IO ()
-renderHorizontalLine n = do
-    repeatRenderChar (chr 196) n
+-- Renders a 3x3 block at the specified point, with a char in the center, and the specified foreground and background color  
+renderBlock :: Point -> Char -> Color -> Color -> IO ()
+renderBlock (x,y) c fg bg = do
+    setCursorPosition x y
+    putStrWithColor "   " fg bg
+    setCursorPosition (x+1) y
+    putStrWithColor [' ', c, ' '] fg bg
+    setCursorPosition (x+2) y
+    putStrWithColor "   " fg bg
 
-renderTopLeft :: IO ()
-renderTopLeft = do
-    putChar $ chr 169
-
-renderVerticalLine = do
-    putChar $ chr 179
-
-renderBoard :: Game -> Config -> IO ()
-renderBoard g c = do
-    renderVerticalLine
-    putStrLn ""
-
-    renderHorizontalLine 5
-    putStrLn ""
-
-    renderTopLeft
-    putStrLn ""
+-- Renders the guess at the specified point
+renderGuess :: Point -> Config -> GuessChar -> IO ()
+renderGuess (x, y) cfg (c, r) = do
+    let fg = fgColorForResult cfg r
+    let bg = bgColorForResult cfg r
     return ()
+
+renderEmptyRow :: Point -> Config -> IO ()
+renderEmptyRow p cfg = do
+    renderGuess p cfg (' ', None) 
+
+renderRow :: Point -> Config -> Guess -> IO ()
+renderRow p cfg [] = renderEmptyRow p cfg
+renderRow (x,y) cfg [gc] = do
+    mapM_ (\i -> renderGuess (x + i*4, y) cfg gc) [0..2] 
+
+
+-- Creates the specified number of empty guesses
+-- Each guess contains 5 letters
+emptyGuesses :: Int -> Guesses
+emptyGuesses 0 = []
+emptyGuesses n = replicate n $ replicate 5 (' ', None)
+
+-- Renders the game board at the specified point
+renderBoard :: Point -> Game -> Config -> IO ()
+renderBoard p g c = do
+    let gc = guessCount c
+    let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
+    mapM_ (renderRow p c) gs
+
+-- This is the main rendering function that gets called each time the game state has changed
+renderGame :: Game -> Config -> IO ()
+renderGame g c = do
+    clearScreen
+    renderBoard (10,10) g c
+    when (showInstructions g) $ renderInstructions c
+    when (showHints g) $ renderHints (hints g)
