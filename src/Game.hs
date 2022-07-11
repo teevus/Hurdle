@@ -1,4 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use zipWith" #-}
 
 {-
 This module contains functions that operate on the Game and related data types such as Guess etc.
@@ -90,10 +92,10 @@ evaluateGuesses g = map (evaluateGuess (answer g)) (guesses g)
 -- Evaluates the specified guess, returning a Guess type which is a list of GuessChar values with the Result value populated
 evaluateGuess :: Answer -> Guess -> Guess
 -- evaluateGuess :: Answer -> [GuessChar] -> [GuessChar]
-evaluateGuess a gcs = map (\(i,gc) -> evaluateGuessChar a i gc) (zip [0..] gcs)
+evaluateGuess a gcs = map (\(i,(c,_)) -> evaluateGuessChar a i c) (zip [0..] gcs)
 
-evaluateGuessChar :: Answer -> Int -> GuessChar -> GuessChar
-evaluateGuessChar a index (c,_)
+evaluateGuessChar :: Answer -> Int -> Char -> GuessChar
+evaluateGuessChar a index c    
     | a !! index == c  = (c,Correct)
     | c `elem` a       = (c,PartlyCorrect)
     | otherwise        = (c,Incorrect)

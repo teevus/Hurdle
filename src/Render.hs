@@ -120,7 +120,8 @@ renderGuess p cfg (c, r) = do
 renderRow :: Point -> Config -> Guess -> String -> IO ()
 renderRow p cfg [] s = renderRow p cfg emptyGuess s
 renderRow (x,y) cfg g s = do
-    mapM_ (\(i, gc) -> renderGuess (x, y + i*6) cfg gc) (zip [0..] g)     -- using zip with infinite list allows us to use the index in the lambda
+    let guesses = take 5 $ g ++ emptyGuess -- ensure we have 5 columns before rendering
+    mapM_ (\(i, gc) -> renderGuess (x, y + i*6) cfg gc) (zip [0..] guesses)     -- using zip with infinite list allows us to use the index in the lambda
     setCursorPosition (x+1) (y+32)
     putStr s -- Displays the help text to the right of the row
 
@@ -144,7 +145,6 @@ helpTextForRow g i =
 -- Renders the game board at the specified point
 renderBoard :: Point -> Game -> Config -> IO ()
 renderBoard (x,y) g c = do
-
     let gc = maxGuesses c
     let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
     mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g i)) (zip [0..] gs)

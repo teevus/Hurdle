@@ -146,9 +146,7 @@ processUserInputM = do
 
     if guessIsFinished then do
         liftIO getLine
-        let modifiedGuesses = startNextRow game
-        put (game { guesses = modifiedGuesses })
-        return ()
+        evaluateGuessesM
     else do
         c <- liftIO getChar
         if c == ' ' then toggleHintsM
@@ -185,15 +183,17 @@ removeLetterM = do
     let modifiedGuesses = removeLetter game
     put (game { guesses = modifiedGuesses })
 
-evaluateGuessesM :: (MonadReader Config m, MonadState Game m)=> m Bool
+evaluateGuessesM :: (MonadReader Config m, MonadState Game m)=> m ()
 evaluateGuessesM = do
     game <- get
     config <- ask
     let modifiedGuesses = evaluateGuesses game 
     put (game { guesses = modifiedGuesses })
+    {-
     let isGameOver = gameOver game config 
     return isGameOver
-
+    -}
+    
 currentGuessIsFinished :: MonadState Game m => m Bool
 currentGuessIsFinished = do
     game <- get
