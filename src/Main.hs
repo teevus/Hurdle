@@ -103,6 +103,7 @@ initializeGame a = Game { answer = a,
 -- MAIN
 main :: IO ((), Game)
 main = do
+    -- MO TODO: This is not working properly in windows terminal
     hSetBuffering stdin NoBuffering
     hSetBuffering stdout NoBuffering
 
@@ -116,8 +117,6 @@ main = do
 
     let config = initializeConfig validGuesses possibleAnswers
     let game = initializeGame answer
-
-    -- threadDelay 500000 -- Sleep for half a second
 
     renderLoading config False
     getLine
@@ -147,8 +146,9 @@ processUserInputM = do
     config <- ask
     let currGuess = currentGuess game
     let guessIsFinished = length currGuess == 5
+    let currGuessIsSubmitted = isSubmitted currGuess
 
-    if guessIsFinished then do
+    if guessIsFinished && not currGuessIsSubmitted then do
         liftIO getLine
         evaluateGuessesM
         startNextRowM

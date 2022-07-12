@@ -17,7 +17,9 @@ module Game (
     addLetter,
     removeLetter,
     evaluateGuesses,
-    startNextRow
+    startNextRow,
+    isSubmitted,
+    winningGuess
 ) where
 
 import Data
