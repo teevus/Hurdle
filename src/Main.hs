@@ -164,8 +164,8 @@ processUserInputM = do
     -- Check if we've reached game over state
     if gameOver game config then do
         renderGameM
-        endGame <- liftIO $ renderGameOver game
-        if not endGame then do
+        playAgain <- liftIO $ renderGameOver game
+        if playAgain then do
             -- Reset the game state
             answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
             let newState = initializeGame answer

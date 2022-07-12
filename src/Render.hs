@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use print" #-}
 
 module Render (
     renderLoading,
@@ -175,7 +177,10 @@ renderLoading c b = do
 renderGameOver :: Game -> IO Bool
 renderGameOver g = do
     let winner = wonGame g
-    when winner $ putStrLn ("CONGRATULATIONS: You won in " ++ show (submittedGuessCount g) ++ " attempts!")
+    if winner then
+        putStrLn $ "CONGRATULATIONS: You won in " ++ show (submittedGuessCount g) ++ " attempts!"
+    else
+        putStrLn "BAD LUCK: You lost!"
 
     putStrLn "Would you like to play again? (Y/N)"
     c <- getChar
@@ -183,5 +188,11 @@ renderGameOver g = do
 
 renderDebug :: Game -> Config -> IO ()
 renderDebug g c = do
-    print g
-    print c
+    putStrLn $ show g
+    putStrLn $ show c
+    let submittedCount = submittedGuessCount g
+    putStrLn $ "SubmittedGuessCount=" ++ show submittedCount
+    let isOver = gameOver g c
+    putStrLn $ "IsGameOver=" ++ show isOver
+    let didWinGame = wonGame g
+    putStrLn $ "DidWinGame=" ++ show isOver
