@@ -81,7 +81,7 @@ selectRandomAnswer xs = do
     return $ selectRandomItem gen xs
 
 initializeConfig :: [Answer] -> [Answer] -> Config
-initializeConfig vg pa = Config { maxGuesses = 6, 
+initializeConfig vg pa = Config { maxGuesses = 6,
                                   hintCount = 5,
                                   foregroundColor = Black,
                                   backgroundColor = White,
@@ -93,9 +93,9 @@ initializeConfig vg pa = Config { maxGuesses = 6,
                                   showDebug = True }
 
 initializeGame :: Answer -> Game
-initializeGame a = Game { answer = a, 
+initializeGame a = Game { answer = a,
                           guesses = [[]],      -- a list containing a single empty item 
-                          showInstructions = False, 
+                          showInstructions = False,
                           showHints = False,
                           hints = [],
                           helpText = "Enter a 5 letter word (or hit Space to Show/Hide HINTS)" }
@@ -111,7 +111,7 @@ main = do
     renderLoading tempConfig True
 
     possibleAnswers <- loadPossibleAnswers
-    answer <- selectRandomAnswer possibleAnswers 
+    answer <- selectRandomAnswer possibleAnswers
     validGuesses <- loadValidGuesses
 
     let config = initializeConfig validGuesses possibleAnswers
@@ -126,38 +126,63 @@ main = do
 
 -- This is the main game loop
 playGame :: ReaderT Config (StateT Game IO) ()
-playGame = forever $ do
+playGame = do
     renderGameM
-    processUserInputM
+    continue <- processUserInputM
+    when continue
+        playGame
 
 -- This is the main rendering function that gets called each time the game state has changed
 renderGameM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
 renderGameM = do
     game <- get
     config <- ask
-    liftIO $ renderGame game config 
+    liftIO $ renderGame game config
 
-processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
+-- Accepts user input, and updates the Game state as required
+-- Returns True: keep playing, False: game has finished
+processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m Bool
 processUserInputM = do
-    -- config <- ask
     game <- get
+    config <- ask
     let currGuess = currentGuess game
     let guessIsFinished = length currGuess == 5
 
     if guessIsFinished then do
         liftIO getLine
         evaluateGuessesM
+        startNextRowM
     else do
         c <- liftIO getChar
         if c == ' ' then toggleHintsM
         else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
         else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
         else if c == '-' then removeLetterM
-        else return () -- still awaiting further user input  -- MO TODO: Use "when"
-
-        -- return True
+        else return () -- still awaiting further user input  -- MO TODO: Use "when"?
     -- MO TODO: Accept backspace character for delete
 
+    -- Check if we've reached game over state
+    if gameOver game config then do
+        renderGameM
+        endGame <- liftIO $ renderGameOver game
+        if not endGame then do
+            -- Reset the game state
+            answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
+            let newState = initializeGame answer
+            -- MO TODO: How to replace entire state without having to do field by field?
+            put (game {
+                        guesses = guesses newState,
+                        hints = hints newState,
+                        showInstructions = showInstructions newState,
+                        showHints = showInstructions newState,
+                        helpText = helpText newState
+                        -- answer = answer newState
+                        })
+            return True
+        else
+            return False
+    else
+        return True
 
 toggleHintsM :: MonadState Game m => m ()
 toggleHintsM = do
@@ -186,17 +211,11 @@ removeLetterM = do
 evaluateGuessesM :: (MonadReader Config m, MonadState Game m)=> m ()
 evaluateGuessesM = do
     game <- get
-    config <- ask
-    let modifiedGuesses = evaluateGuesses game 
+    let modifiedGuesses = evaluateGuesses game
     put (game { guesses = modifiedGuesses })
-    {-
-    let isGameOver = gameOver game config 
-    return isGameOver
-    -}
-    
-currentGuessIsFinished :: MonadState Game m => m Bool
-currentGuessIsFinished = do
+
+startNextRowM :: (MonadReader Config m, MonadState Game m)=> m ()
+startNextRowM = do
     game <- get
-    let currGuess = currentGuess game
-    let isFinished = length currGuess == 5 -- Current guess has all letters -- MO TODO; Move this game logic into Game.hs
-    return isFinished
+    let modifiedGuesses = startNextRow game
+    put (game { guesses = modifiedGuesses })

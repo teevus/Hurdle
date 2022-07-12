@@ -4,7 +4,7 @@
 module Render (
     renderLoading,
     renderGame,
-    renderOver
+    renderGameOver
  ) where
 
 import Data.Char
@@ -172,8 +172,8 @@ renderLoading c b = do
     if b then putStrLn "Loading..." else putStrLn "Press ENTER to start"
 
 
-renderOver :: Game -> IO Bool
-renderOver g = do
+renderGameOver :: Game -> IO Bool
+renderGameOver g = do
     let winner = wonGame g
     when winner $ putStrLn ("CONGRATULATIONS: You won in " ++ show (submittedGuessCount g) ++ " attempts!")
 
