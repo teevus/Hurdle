@@ -27,7 +27,7 @@ module Game (
 ) where
 
 import Data
-import Utils 
+import Utils
 import System.Console.ANSI
 
 -- Returns the guesses that have been submitted
@@ -68,33 +68,33 @@ toWord :: Guess -> String
 toWord g = map fst g
 
 -- Adds a letter to the current guess and returns a list containing the guesses
-addLetter :: Game -> Char -> Guesses
-addLetter game c = replaceElem gs (currentGuessIndex game) modifiedGuess
+addLetter :: Game -> Char -> Game
+addLetter game c = game { guesses = replaceElem gs (currentGuessIndex game) modifiedGuess }
     where gs = guesses game
           currGuess = currentGuess game
           modifiedGuess = addLetterToGuess currGuess c
+
+-- Removes the last letter from the current guess and returns the updated game state
+-- Note: the last letter can only be removed if the guess has not been submitted yet (i.e. Result will be None)
+removeLetter :: Game -> Game
+removeLetter game = game { guesses = replaceElem gs (currentGuessIndex game) modifiedGuess }
+    where gs = guesses game
+          currGuess = currentGuess game
+          modifiedGuess = removeLetterFromGuess currGuess
 
 -- Adds a letter to the specified guess (unless its already full)
 addLetterToGuess :: Guess -> Char -> Guess
 addLetterToGuess g c = if length g < 5 then g ++ [(c, None)] else g
 -- Note: adding to the end of a list in Haskell can be expensive, but in this case our list will have maximum length of 6
 
--- Returns a list of guesses, which contains the existing guesses, but with the last letter removed
--- Note: the last letter can only be removed if the guess has not been submitted yet (i.e. Result will be None)
-removeLetter :: Game -> Guesses
-removeLetter game = replaceElem gs (currentGuessIndex game) modifiedGuess
-    where gs = guesses game
-          currGuess = currentGuess game
-          modifiedGuess = removeLetterFromGuess currGuess
--- MO TODO: There is some similarity between addLetter and removeLetter, so I could refactor this
-
+-- Removes the last letter from the guess
 removeLetterFromGuess :: Guess -> Guess  -- Note: Guess is simply [GuessChar]
 removeLetterFromGuess [] = []
 removeLetterFromGuess gc = init gc
 
--- Evaluates all guesses and returns a list of the guesses with the Result value populated
-evaluateGuesses :: Game -> Guesses
-evaluateGuesses g = map (evaluateGuess (answer g)) (guesses g)
+-- Evaluates all guesses and returns update Game with the Result values populated for the submitted guesses
+evaluateGuesses :: Game -> Game
+evaluateGuesses game = game { guesses = map (evaluateGuess (answer game)) (guesses game) }
 
 -- Evaluates the specified guess, returning a Guess type which is a list of GuessChar values with the Result value populated
 evaluateGuess :: Answer -> Guess -> Guess
@@ -102,14 +102,15 @@ evaluateGuess :: Answer -> Guess -> Guess
 evaluateGuess a gcs = map (\(i,(c,_)) -> evaluateGuessChar a i c) (zip [0..] gcs)
 
 evaluateGuessChar :: Answer -> Int -> Char -> GuessChar
-evaluateGuessChar a index c    
+evaluateGuessChar a index c
     | a !! index == c  = (c,Correct)
     | c `elem` a       = (c,PartlyCorrect)
     | otherwise        = (c,Incorrect)
 
-
-startNextRow :: Game -> Guesses
-startNextRow g = guesses g ++ [[]]
+startNextRow :: Game -> Config -> Game
+startNextRow game cfg
+    | length (guesses game) >= maxGuesses cfg = game
+    | otherwise = game { guesses = guesses game ++ [[]] }
 
 initializeConfig :: [Answer] -> [Answer] -> Config
 initializeConfig vg pa = Config { maxGuesses = 6,

@@ -58,26 +58,22 @@ knownResults gs = filter (\(_,r) -> r /= None) (nub $ concat gs)
 -- MO TODO: prioritize words that have commonly occuring letters, that have not yet been eliminated 
 randomHints :: Int -> Int -> Guesses -> [Answer] -> IO Hints
 randomHints n nmax g a = do
-    gen <- getStdGen
+    gen <- newStdGen
     return $ selectRandomItems gen n (getHints nmax g a)
 
 loadPossibleAnswers :: IO [Answer]
 loadPossibleAnswers = do
     contents <- readFile "data/solutions.txt"
-    let answers = map (map toUpper) (words contents)
-    return answers
--- return ["TESTS", "TANKS", "TUBBY", "TOOLS"]  --For testing
+    return $ parseWords contents
 
 loadValidGuesses :: IO [Answer]
 loadValidGuesses = do
     contents <- readFile "data/allwords.txt"
-    let answers = map (map toUpper) (words contents)
-    return answers
--- return $ ["REALM", "RESTS", "WEIRD"]  ++ possibleAnswers --For testing
+    return $ parseWords contents
 
 selectRandomAnswer :: [Answer] -> IO Answer
 selectRandomAnswer xs = do
-    gen <- getStdGen
+    gen <- newStdGen
     return $ selectRandomItem gen xs
 
 -- MAIN
@@ -86,7 +82,6 @@ main = do
     -- MO TODO: This is not working properly in windows terminal
     hSetBuffering stdin NoBuffering
     hSetBuffering stdout NoBuffering
-    hSetEcho stdin False
 
     -- Need some basic config to render the loading screen with the instructions
     let tempConfig = initializeConfig [] []
@@ -108,7 +103,7 @@ main = do
 playGame :: ReaderT Config (StateT Game IO) ()
 playGame = do
     renderGameM
-    continue <- processUserInputM
+    continue <- processNextM
     when continue
         playGame
 
@@ -120,9 +115,10 @@ renderGameM = do
     liftIO $ renderGame game config
 
 -- Accepts user input, and updates the Game state as required
--- Returns True: keep playing, False: game has finished
-processUserInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m Bool
-processUserInputM = do
+-- Returns True:  keep playing, 
+--         False: The application should exit
+processNextM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m Bool
+processNextM = do
     game <- get
     config <- ask
     let currGuess = currentGuess game
@@ -132,15 +128,17 @@ processUserInputM = do
     if guessIsFinished && not currGuessIsSubmitted then do
         liftIO getLine
         evaluateGuessesM
-        startNextRowM
+        unless (gameOver game config) startNextRowM
     else do
+        liftIO $ hSetEcho stdin False
         c <- liftIO getChar
-        if c == ' ' then toggleHintsM
-        else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
-        else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
-        else when (c == '-') removeLetterM -- still awaiting further user input  -- MO TODO: Use "when"?
+        liftIO $ hSetEcho stdin True
 
-    -- MO TODO: Accept backspace character for delete
+        -- MO TODO: Accept backspace character for delete
+        if c == ' ' then toggleHintsM
+        else if c == '!' then toggleInstructionsM
+        else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
+        else when (c == '-') removeLetterM -- still awaiting further user input
 
     -- Check if we've reached game over state
     if gameOver game config then do
@@ -169,25 +167,28 @@ toggleInstructionsM = do
     let currentValue = showInstructions game
     put (game { showInstructions = not currentValue })
 
+-- MO TODO: Only run the code to update the MonadState in a single place?
 addLetterM :: MonadState Game m => Char -> m ()
 addLetterM c = do
     game <- get
-    let modifiedGuesses = addLetter game c
-    put (game { guesses = modifiedGuesses })
+    let modifiedGame = addLetter game c
+    put modifiedGame
+
 removeLetterM :: MonadState Game m => m ()
 removeLetterM = do
     game <- get
-    let modifiedGuesses = removeLetter game
-    put (game { guesses = modifiedGuesses })
+    let modifiedGame = removeLetter game
+    put modifiedGame
 
 evaluateGuessesM :: (MonadReader Config m, MonadState Game m)=> m ()
 evaluateGuessesM = do
     game <- get
-    let modifiedGuesses = evaluateGuesses game
-    put (game { guesses = modifiedGuesses })
+    let modifiedGame = evaluateGuesses game
+    put modifiedGame
 
 startNextRowM :: (MonadReader Config m, MonadState Game m)=> m ()
 startNextRowM = do
     game <- get
-    let modifiedGuesses = startNextRow game
-    put (game { guesses = modifiedGuesses })
+    cfg <- ask
+    let modifiedGame = startNextRow game cfg
+    put modifiedGame

@@ -198,6 +198,6 @@ renderDebug g c = do
     putStrLn $ "DidWinGame=" ++ show isOver
     putStrLn "Guesses="
     mapM_ (putStrLn . toWord) (guesses g)
-    putStrLn "IsWinner="
     let a = answer g
+    putStrLn $ "IsWinningGuess=" ++ a
     mapM_ (putStrLn . show . winningGuess a) (guesses g)
