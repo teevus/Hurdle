@@ -137,18 +137,18 @@ emptyGuesses :: Int -> Guesses
 emptyGuesses 0 = []
 emptyGuesses n = replicate n emptyGuess
 
-helpTextForRow :: Game -> Int -> String
-helpTextForRow g i =
+helpTextForRow :: Game -> Config -> Int -> String
+helpTextForRow game cfg i =
     if i == (length gs - 1) then help else ""
-    where gs = guesses g
-          help = helpText g
+    where gs = guesses game
+          help = helpText game cfg
 
 -- Renders the game board at the specified point
 renderBoard :: Point -> Game -> Config -> IO ()
 renderBoard (x,y) g c = do
     let gc = maxGuesses c
     let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
-    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g i)) (zip [0..] gs)
+    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g c i)) (zip [0..] gs)
 -- MO TODO: create mapM_withIndex function
 
 -- Renders the game as per the current game state
@@ -184,6 +184,7 @@ renderDebug :: Game -> Config -> IO ()
 renderDebug g c = do
     putStrLn $ show g
     putStrLn $ show c
+    {-
     let submittedCount = submittedGuessCount g
     putStrLn $ "SubmittedGuessCount=" ++ show submittedCount
     let isOver = gameOver g c
@@ -196,3 +197,4 @@ renderDebug g c = do
     putStrLn $ "IsWinningGuess=" ++ a
     mapM_ (putStrLn . show . winningGuess a) (guesses g)
     putStrLn $ "CurrentGuessIsValid=" ++ show (currentGuessIsValid c g)
+    -}

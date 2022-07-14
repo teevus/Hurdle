@@ -31,7 +31,8 @@ module Game (
     guessIsFinished,
     currentGuessIsFinished,
     currentGuessIsSubmitted,
-    processEnterKey
+    processEnterKey,
+    helpText
 ) where
 
 import System.Console.ANSI
@@ -59,8 +60,8 @@ initializeGame a = Game { answer = a,
                           showInstructions = False,
                           showHints = False,
                           hints = [],
-                          helpText = "Enter a 5 letter word (or press SPACE to show Hints)",
-                          userQuit = False }
+                          userQuit = False,
+                          showInvalidMessage = False }
 
 -- Returns the guesses that have been submitted
 submittedGuesses :: Game -> [Guess]
@@ -97,7 +98,7 @@ wonGame g = any (winningGuess (answer g)) (submittedGuesses g)
 
 -- Determine whether the specified guess is a winning guess
 winningGuess :: Answer -> Guess -> Bool
-winningGuess a g = toWord g == a
+winningGuess a g = guessIsSubmitted g && toWord g == a
 
 -- Converts a guess (which is a list of tuples) to the actual word that was guessed (String)
 toWord :: Guess -> String
@@ -113,7 +114,7 @@ addLetter game c = game { guesses = replaceElem gs (currentGuessIndex game) modi
 -- Removes the last letter from the current guess and returns the updated game state
 -- Note: the last letter can only be removed if the guess has not been submitted yet (i.e. Result will be None)
 removeLetter :: Game -> Game
-removeLetter game = game { guesses = replaceElem gs (currentGuessIndex game) modifiedGuess }
+removeLetter game = game { guesses = replaceElem gs (currentGuessIndex game) modifiedGuess, showInvalidMessage = False }
     where gs = guesses game
           currGuess = currentGuess game
           modifiedGuess = removeLetterFromGuess currGuess
@@ -145,9 +146,11 @@ evaluateGuessChar a index c
 
 -- Submits the guess, which evaluates it, and if its a valid guess, will start a new row 
 submitGuess :: Game -> Config -> Game
-submitGuess game cfg = if currentGuessIsValid cfg game then
-                        startNextRow (evaluateGuesses game) cfg
-                  else game { helpText = "You have entered an invalid word!" }
+submitGuess game cfg = 
+    if currentGuessIsValid cfg game then
+        startNextRow (evaluateGuesses game { showInvalidMessage = False }) cfg  
+    else 
+        game { showInvalidMessage = True }
 
 -- Checks if the guess is a valid one using the list of valid words
 guessIsValid :: Config -> Guess -> Bool
@@ -167,6 +170,17 @@ startNextRow :: Game -> Config -> Game
 startNextRow game cfg
     | gameOver game cfg = game -- Do nothing
     | otherwise = game { guesses = guesses game ++ [[]] }
+
+-- Text on the current row that tells the user what they need to do
+helpText :: Game -> Config -> String
+helpText game cfg
+    | gameOver game cfg           = if wonGame game then 
+                                        "CONGRATULATIONS: You won in " ++ show (submittedGuessCount game) ++ " attempts!"
+                                    else
+                                        "BAD LUCK: You ran out of attempts!"
+    | showInvalidMessage game     = "You have entered an invalid word!"
+    | currentGuessIsFinished game = "Press ENTER to Submit"
+    | otherwise                   = "Enter a 5 letter word"
 
 -- Processes the user input character
 processUserInput :: Char -> Game -> Config -> (Bool, Game)

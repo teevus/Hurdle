@@ -57,11 +57,11 @@ instance Show Config where
              "        showDebug = " ++ show (showDebug c)
 
 data Game = Game {
-    answer           :: Answer,     -- The correct answer
-    guesses          :: Guesses,    -- The guesses the player has made
-    hints            :: Hints,      -- Hints to display
-    showInstructions :: Bool,       -- Whether to display instructions on screen can be toggled on/off by the player
-    showHints        :: Bool,       -- Whether to display hints on screen can be toggled on/off by the player
-    helpText         :: String,     -- Text on the current row that tells the user what they need to do
-    userQuit         :: Bool        -- Indicates that the user has pressed escape to exit the game
+    answer              :: Answer,     -- The correct answer
+    guesses             :: Guesses,    -- The guesses the player has made
+    hints               :: Hints,      -- Hints to display
+    showInstructions    :: Bool,       -- Whether to display instructions on screen can be toggled on/off by the player
+    showHints           :: Bool,       -- Whether to display hints on screen can be toggled on/off by the player
+    userQuit            :: Bool,       -- Indicates that the user has pressed escape to exit the game
+    showInvalidMessage  :: Bool        -- Indicates that the user has attempted to submit the current guess but its not an acceptible word
 } deriving (Eq, Show)

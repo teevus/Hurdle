@@ -110,6 +110,7 @@ playGameM = do
 
     -- User pressed escape to quit - prompt them if they really want to
     if userQuit game then do
+        
         liftIO $ putStrLn "Are you sure you want to QUIT? (Y/N)"
         liftIO $ hSetEcho stdin False
         c <- liftIO getHiddenChar
@@ -121,11 +122,6 @@ playGameM = do
     -- Check if we've reached game over state, and prompt the user whether to play another game if we have
     else if gameOver game config then do
         
-        if wonGame game then
-            put $ game { helpText = "CONGRATULATIONS: You won in " ++ show (submittedGuessCount game) ++ " attempts!" }
-        else
-            put $ game { helpText = "BAD LUCK: You lost!" }
-
         -- game <- get    -- MO TODO: Is this necessary and does it need to be different to game?
         renderGameM
         playAgain <- liftIO $ renderGameOver game
@@ -136,11 +132,7 @@ playGameM = do
             playGameM
 
     else do -- Game is still in process
-        if currentGuessIsFinished game && not (currentGuessIsSubmitted game) then
-            put $ game { helpText = "Press ENTER to Submit (or press SPACE for Hints)" }
-        else
-            put $ game { helpText = "Enter a 5 letter word (or press SPACE to show Hints)" }    -- MO TODO: Move this helpText stuff into a separate function
-        
+
         playGameM
 
 
