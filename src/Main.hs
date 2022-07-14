@@ -127,18 +127,12 @@ processNextM = do
 
     if guessIsFinished && not currGuessIsSubmitted then do
         liftIO getLine
-        evaluateGuessesM
-        unless (gameOver game config) startNextRowM
+        submitGuessM
     else do
         liftIO $ hSetEcho stdin False
         c <- liftIO getChar
         liftIO $ hSetEcho stdin True
-
-        -- MO TODO: Accept backspace character for delete
-        if c == ' ' then toggleHintsM
-        else if c == '!' then toggleInstructionsM
-        else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
-        else when (c == '-') removeLetterM -- still awaiting further user input
+        processUserInputM c
 
     -- Check if we've reached game over state
     if gameOver game config then do
@@ -162,40 +156,9 @@ processUserInputM c = do
     let modifiedGame = processUserInput c game
     put modifiedGame
 
-toggleHintsM :: MonadState Game m => m ()
-toggleHintsM = do
+submitGuessM :: (MonadReader Config m, MonadState Game m)=> m ()
+submitGuessM = do
     game <- get
-    let currentValue = showHints game
-    put (game { showHints = not currentValue })
-
-toggleInstructionsM :: MonadState Game m => m ()
-toggleInstructionsM = do
-    game <- get
-    let currentValue = showInstructions game
-    put (game { showInstructions = not currentValue })
-
--- MO TODO: Only run the code to update the MonadState in a single place?
-addLetterM :: MonadState Game m => Char -> m ()
-addLetterM c = do
-    game <- get
-    let modifiedGame = addLetter game c
-    put modifiedGame
-
-removeLetterM :: MonadState Game m => m ()
-removeLetterM = do
-    game <- get
-    let modifiedGame = removeLetter game
-    put modifiedGame
-
-evaluateGuessesM :: (MonadReader Config m, MonadState Game m)=> m ()
-evaluateGuessesM = do
-    game <- get
-    let modifiedGame = evaluateGuesses game
-    put modifiedGame
-
-startNextRowM :: (MonadReader Config m, MonadState Game m)=> m ()
-startNextRowM = do
-    game <- get
-    cfg <- ask
-    let modifiedGame = startNextRow game cfg
+    config <- ask
+    let modifiedGame = startNextRow (evaluateGuesses game) config  -- MO TODO: Use functional composition to make the intent clearer    
     put modifiedGame
