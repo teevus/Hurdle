@@ -93,7 +93,7 @@ gameOver g c = submittedGuessCount g >= maxGuesses c || any (winningGuess (answe
 
 -- Determines whether the player has won the game
 wonGame :: Game -> Bool
-wonGame g = any (winningGuess (answer g)) (guesses g)
+wonGame g = any (winningGuess (answer g)) (submittedGuesses g)
 
 -- Determine whether the specified guess is a winning guess
 winningGuess :: Answer -> Guess -> Bool
@@ -151,10 +151,10 @@ submitGuess game cfg = if currentGuessIsValid cfg game then
 
 -- Checks if the guess is a valid one using the list of valid words
 guessIsValid :: Config -> Guess -> Bool
-guessIsValid c g = toWord g `elem` validGuesses c
+guessIsValid c g = guessIsFinished g && toWord g `elem` validGuesses c
 
 currentGuessIsValid :: Config -> Game -> Bool
-currentGuessIsValid c g =  guessIsValid c (currentGuess g)
+currentGuessIsValid c g =  guessIsValid c $ currentGuess g
 
 guessIsFinished :: Guess -> Bool
 guessIsFinished g = length g == 5

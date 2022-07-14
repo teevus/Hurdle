@@ -19,6 +19,7 @@ import Test.HUnit
 import System.Exit
 import Data
 import Game
+import Debug.Trace
 
 
 -- wonGame tests
@@ -136,12 +137,22 @@ processEnterKeySuccess = TestCase do
     let game = initializeGameWithGuesses "WORDL" [g]
     let config = initializeConfig ["REALM","WORDL"] ["REALM","WORDL"]
 
+    assertEqual "PRE processEnterKeySuccess submittedCount" 0 (length $ submittedGuesses game)
     assertEqual "PRE processEnterKeySuccess toWord" True (toWord g == "REALM")
     assertEqual "PRE processEnterKeySuccess currentGuessIsValid" True (currentGuessIsValid config game)
 
+    traceIO "-------------"
+    traceIO $ show game
+
     let result = processEnterKey game config
-    assertEqual "processEnterKeySuccess currentGuessIsSubmitted" True (currentGuessIsSubmitted result)
+
+    traceIO "-------------"
+    traceIO $ show result
+
+    assertEqual "processEnterKeySuccess currentGuessIsSubmitted" False (currentGuessIsSubmitted result)
+    assertEqual "processEnterKeySuccess currentGuessIsValid" False (currentGuessIsValid config result)
     assertEqual "processEnterKeySuccess guessCount" 2 (length $ guesses result)
+    assertEqual "processEnterKeySuccess submittedCount" 1 (length $ submittedGuesses result)
 
 processEnterKeyTooShort = TestCase do
     let gs = [ createGuessFromAnswer "REA" None]
@@ -183,7 +194,7 @@ guessIsValidFalse = TestCase do
 {-  **** ENTRY POINT **** -}
 main :: IO ()
 main = do
-    counts <- runTestTT (test [ wonGameWithNoGuesses, wonGameWithIncorrectGuess, wonGameWithCorrectGuess, 
+    counts <- runTestTT (test [ wonGameWithNoGuesses, wonGameWithIncorrectGuess, wonGameWithCorrectGuess, wonGameNotSubmitted,
                                 winningGuessWithIncorrectGuess, winningGuessWithEmptyGuess, winningGuessWithCorrectGuess,
                                 toWordEmpty, toWordSuccess, 
                                 submittedGuessesNone, submittedGuessesMultiple,
