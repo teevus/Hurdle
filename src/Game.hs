@@ -23,12 +23,37 @@ module Game (
     isSubmitted,
     winningGuess,
     initializeConfig,
-    initializeGame
+    initializeGame,
+    processUserInput
 ) where
 
+import System.Console.ANSI
+import Data.Char
 import Data
 import Utils
-import System.Console.ANSI
+
+-- Initializes the config
+initializeConfig :: [Answer] -> [Answer] -> Config
+initializeConfig vg pa = Config { maxGuesses = 6,
+                                  hintCount = 5,
+                                  foregroundColor = Black,
+                                  backgroundColor = White,
+                                  correctColor = Green,
+                                  partlyCorrectColor = Yellow,
+                                  incorrectColor = Blue,
+                                  validGuesses = vg,
+                                  possibleAnswers = pa,
+                                  showDebug = True }
+
+-- Initializes the game data with the specified Answer
+initializeGame :: Answer -> Game
+initializeGame a = Game { answer = a,
+                          guesses = [[]],      -- a list containing a single empty item 
+                          showInstructions = False,
+                          showHints = False,
+                          hints = [],
+                          helpText = "Enter a 5 letter word (or hit Space to show HINTS)" }
+
 
 -- Returns the guesses that have been submitted
 submittedGuesses :: Game -> [Guess]
@@ -107,27 +132,17 @@ evaluateGuessChar a index c
     | c `elem` a       = (c,PartlyCorrect)
     | otherwise        = (c,Incorrect)
 
+-- Starts a new row on the board (if its not already at gameOver state)
 startNextRow :: Game -> Config -> Game
 startNextRow game cfg
-    | length (guesses game) >= maxGuesses cfg = game
+    | gameOver game cfg = game -- Do nothing
     | otherwise = game { guesses = guesses game ++ [[]] }
 
-initializeConfig :: [Answer] -> [Answer] -> Config
-initializeConfig vg pa = Config { maxGuesses = 6,
-                                  hintCount = 5,
-                                  foregroundColor = Black,
-                                  backgroundColor = White,
-                                  correctColor = Green,
-                                  partlyCorrectColor = Yellow,
-                                  incorrectColor = Blue,
-                                  validGuesses = vg,
-                                  possibleAnswers = pa,
-                                  showDebug = True }
-
-initializeGame :: Answer -> Game
-initializeGame a = Game { answer = a,
-                          guesses = [[]],      -- a list containing a single empty item 
-                          showInstructions = False,
-                          showHints = False,
-                          hints = [],
-                          helpText = "Enter a 5 letter word (or hit Space to Show/Hide HINTS)" }
+processUserInput :: Char -> Game -> Game
+processUserInput c game
+  | c == ' '  = game { showHints = not $ showHints game }
+  | c == '!'  = game { showInstructions = not $ showInstructions game }
+  | c `elem` ['a'..'z'] || c `elem` ['A'..'Z'] = addLetter game (toUpper c)
+  | c == '-'  = removeLetter game
+  | otherwise = game
+        -- MO TODO: How to accept backspace character for delete? Ctrl characters for toggle hints/instructions

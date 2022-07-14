@@ -155,6 +155,13 @@ processNextM = do
     else
         return True
 
+processUserInputM :: (MonadReader Config m, MonadState Game m) => Char -> m ()
+processUserInputM c = do
+    game <- get
+    config <- ask
+    let modifiedGame = processUserInput c game
+    put modifiedGame
+
 toggleHintsM :: MonadState Game m => m ()
 toggleHintsM = do
     game <- get
