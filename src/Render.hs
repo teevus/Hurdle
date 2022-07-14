@@ -177,7 +177,7 @@ renderGameOver :: Game -> IO Bool
 renderGameOver g = do
     putStrLn ""
     putStrLn "Would you like to play again? (Y/N)"
-    c <- getChar
+    c <- getHiddenChar
     return $ c == 'y' || c == 'Y'
 
 renderDebug :: Game -> Config -> IO ()
