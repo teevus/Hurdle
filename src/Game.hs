@@ -26,6 +26,7 @@ module Game (
     initializeGame,
     processUserInput,
     submitGuess,
+    guessIsValid,
     currentGuessIsValid,
     guessIsFinished,
     currentGuessIsFinished,
@@ -168,16 +169,16 @@ startNextRow game cfg
     | otherwise = game { guesses = guesses game ++ [[]] }
 
 -- Processes the user input character
-processUserInput :: Char -> Game -> Config -> Game
+processUserInput :: Char -> Game -> Config -> (Bool, Game)
 processUserInput c game cfg
-  | c == ' '               = game { showHints = not $ showHints game }
-  | c == '+'               = game { showInstructions = not $ showInstructions game }
+  | c == ' '               = (True, game { showHints = not $ showHints game })
+  | c == '+'               = (True, game { showInstructions = not $ showInstructions game })
   | c `elem` ['a'..'z'] || 
-    c `elem` ['A'..'Z']    = addLetter game (toUpper c)     -- Valid letter
-  | fromEnum c == 8        = removeLetter game              -- Backspace
-  | fromEnum c == 13       = processEnterKey game cfg       -- Enter
-  | fromEnum c == 27       = game { userQuit = True }       -- Esc
-  | otherwise              = game
+    c `elem` ['A'..'Z']    = (True, addLetter game (toUpper c))     -- Valid letter
+  | fromEnum c == 8        = (True, removeLetter game)              -- Backspace
+  | fromEnum c == 13       = (True, processEnterKey game cfg)       -- Enter
+  | fromEnum c == 27       = (True, game { userQuit = True })       -- Esc
+  | otherwise              = (False, game)                          -- Invalid input
 
 -- Processes the enter key being pressed
 processEnterKey :: Game -> Config -> Game

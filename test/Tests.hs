@@ -46,6 +46,12 @@ wonGameWithCorrectGuess = TestCase do
     let result = wonGame game
     assertEqual "wonGameWithCorrectGuess" True result
 
+wonGameNotSubmitted = TestCase do
+    let guesses = [ createGuessFromAnswer  "REALM" None]
+    let game = initializeGameWithGuesses "REALM" guesses
+
+    let result = wonGame game
+    assertEqual "wonGameNotSubmitted" False result
 
 -- winningGuess tests
 
@@ -126,13 +132,16 @@ currentGuessMultiple = TestCase do
     assertEqual "currentGuessIndex 2" (currentGuessIndex game) 2
 
 processEnterKeySuccess = TestCase do
-    let gs = [ createGuessFromAnswer "REALM" None]
-    let game = initializeGameWithGuesses "WORDL" gs
-    let config = initializeConfig [] []
+    let g = createGuessFromAnswer "REALM" None
+    let game = initializeGameWithGuesses "WORDL" [g]
+    let config = initializeConfig ["REALM","WORDL"] ["REALM","WORDL"]
+
+    assertEqual "PRE processEnterKeySuccess toWord" True (toWord g == "REALM")
+    assertEqual "PRE processEnterKeySuccess currentGuessIsValid" True (currentGuessIsValid config game)
 
     let result = processEnterKey game config
-    assertEqual "processEnterKeySuccess currentGuessIsSubmitted" True (currentGuessIsSubmitted game)
-    assertEqual "processEnterKeySuccess guessCount" 2 (length $ guesses game)
+    assertEqual "processEnterKeySuccess currentGuessIsSubmitted" True (currentGuessIsSubmitted result)
+    assertEqual "processEnterKeySuccess guessCount" 2 (length $ guesses result)
 
 processEnterKeyTooShort = TestCase do
     let gs = [ createGuessFromAnswer "REA" None]
@@ -140,9 +149,36 @@ processEnterKeyTooShort = TestCase do
     let config = initializeConfig [] []
 
     let result = processEnterKey game config
-    assertEqual "processEnterKeyTooShort currentGuessIsSubmitted" False (currentGuessIsSubmitted game)
-    assertEqual "processEnterKeyTooShort guessCount" 2 (length $ guesses game)
+    assertEqual "processEnterKeyTooShort currentGuessIsSubmitted" False (currentGuessIsSubmitted result)
+    assertEqual "processEnterKeyTooShort currentGuessIsValid" False (currentGuessIsValid config result)
+    assertEqual "processEnterKeyTooShort guessCount" 1 (length $ guesses result)
     assertEqual "" game result
+
+currentGuessIsFinishedTrue = TestCase do
+    let gs = [ createGuessFromAnswer "AAAAA" None]
+    let game = initializeGameWithGuesses "WORDL" gs
+
+    let result = currentGuessIsFinished game
+    assertEqual "currentGuessIsFinishedTrue" True result
+
+currentGuessIsFinishedFalse = TestCase do
+    let gs = [ createGuessFromAnswer "AAAA" None]
+    let game = initializeGameWithGuesses "WORDL" gs
+
+    let result = currentGuessIsFinished game
+    assertEqual "currentGuessIsFinishedFalse" False result
+
+guessIsValidTrue = TestCase do
+    let config = initializeConfig ["TESTS", "TORTS"] ["TARTS", "TORTS"]
+    let guess = createGuessFromAnswer "TORTS" None 
+    let result = guessIsValid config guess
+    assertEqual "guessIsValidTrue" True result
+
+guessIsValidFalse = TestCase do
+    let config = initializeConfig ["TESTS", "TORTS"] ["TESTS", "TORTS"]
+    let guess = createGuessFromAnswer "TOAST" None 
+    let result = guessIsValid config guess
+    assertEqual "guessIsValidFalse" False result
 
 {-  **** ENTRY POINT **** -}
 main :: IO ()
@@ -152,7 +188,9 @@ main = do
                                 toWordEmpty, toWordSuccess, 
                                 submittedGuessesNone, submittedGuessesMultiple,
                                 currentGuessSingle, currentGuessMultiple,
-                                processEnterKeySuccess, processEnterKeyTooShort ])
+                                processEnterKeySuccess, processEnterKeyTooShort,
+                                currentGuessIsFinishedTrue, currentGuessIsFinishedFalse,
+                                guessIsValidTrue, guessIsValidFalse])
 
     if errors counts + failures counts == 0 
         then exitSuccess 

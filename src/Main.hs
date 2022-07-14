@@ -108,6 +108,7 @@ playGameM = do
     game <- get
     config <- ask
 
+    -- User pressed escape to quit - prompt them if they really want to
     if userQuit game then do
         liftIO $ putStrLn "Are you sure you want to QUIT? (Y/N)"
         liftIO $ hSetEcho stdin False
@@ -117,30 +118,30 @@ playGameM = do
             put $ game { userQuit = False}
             playGameM
 
-    else do
-        -- Check if we've reached game over state, and prompt the user whether to play another game if we have
-        when (gameOver game config) $ do
-            if wonGame game then
-                put $ game { helpText = "CONGRATULATIONS: You won in " ++ show (submittedGuessCount game) ++ " attempts!" }
-            else
-                put $ game { helpText = "BAD LUCK: You lost!" }
+    -- Check if we've reached game over state, and prompt the user whether to play another game if we have
+    else if gameOver game config then do
+        
+        if wonGame game then
+            put $ game { helpText = "CONGRATULATIONS: You won in " ++ show (submittedGuessCount game) ++ " attempts!" }
+        else
+            put $ game { helpText = "BAD LUCK: You lost!" }
 
-            game <- get    -- MO TODO: Is this necessary and does it need to be different to game?
-            renderGameM
-            playAgain <- liftIO $ renderGameOver game
-            when playAgain $ do
-                -- Reset the game state
-                answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
-                put $ initializeGame answer
+        -- game <- get    -- MO TODO: Is this necessary and does it need to be different to game?
+        renderGameM
+        playAgain <- liftIO $ renderGameOver game
+        when playAgain $ do
+            -- Reset the game state
+            answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
+            put $ initializeGame answer
+            playGameM
 
+    else do -- Game is still in process
         if currentGuessIsFinished game && not (currentGuessIsSubmitted game) then
             put $ game { helpText = "Press ENTER to Submit (or press SPACE for Hints)" }
         else
             put $ game { helpText = "Enter a 5 letter word (or press SPACE to show Hints)" }    -- MO TODO: Move this helpText stuff into a separate function
         
-        game <- get
-        when (not (userQuit game) && not (gameOver game config)) $ do
-            playGameM
+        playGameM
 
 
 -- This is the main rendering function that gets called each time the game state has changed
@@ -161,6 +162,9 @@ processNextInputM = do
     when (showDebug config) $ liftIO $ putStrLn (show $ fromEnum c)
     liftIO $ hSetEcho stdin True
 
-    let modifiedGame = processUserInput c game config
-    put modifiedGame
+    let (modified, modifiedGame) = processUserInput c game config
+    if modified then
+        put modifiedGame
+    else
+        processNextInputM
 
