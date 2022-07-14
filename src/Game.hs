@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use zipWith" #-}
 {-# HLINT ignore "Eta reduce" #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 {-
 This module contains functions that operate on the Game and related data types such as Guess etc.
@@ -32,11 +33,13 @@ module Game (
     currentGuessIsFinished,
     currentGuessIsSubmitted,
     processEnterKey,
-    helpText
+    helpText,
+    getHints
 ) where
 
 import System.Console.ANSI
 import Data.Char
+import Data.List
 import Data
 import Utils
 
@@ -51,7 +54,7 @@ initializeConfig vg pa = Config { maxGuesses = 6,
                                   incorrectColor = Blue,
                                   validGuesses = vg,
                                   possibleAnswers = pa,
-                                  showDebug = True }
+                                  showDebug = False }
 
 -- Initializes the game data with the specified Answer
 initializeGame :: Answer -> Game
@@ -169,7 +172,7 @@ currentGuessIsFinished g = guessIsFinished (currentGuess g)
 startNextRow :: Game -> Config -> Game
 startNextRow game cfg
     | gameOver game cfg = game -- Do nothing
-    | otherwise = game { guesses = guesses game ++ [[]] }
+    | otherwise = game { guesses = guesses game ++ [[]], showHints = False }
 
 -- Text on the current row that tells the user what they need to do
 helpText :: Game -> Config -> String
@@ -181,6 +184,28 @@ helpText game cfg
     | showInvalidMessage game     = "You have entered an invalid word!"
     | currentGuessIsFinished game = "Press ENTER to Submit"
     | otherwise                   = "Enter a 5 letter word"
+
+-- Determines whether the specified string matches the guessed character
+matchesGuess :: String -> GuessChar -> Bool
+-- matchesGuess _ (_, None) = False -- I'd prefer an error since this shouldnt ever be passed to this function
+matchesGuess s (c, Incorrect) = c `notElem` s      -- notElem returns True if the element is not contained within the list (from Data.List)
+matchesGuess s (c, PartlyCorrect) = c `elem` s     -- elem return True if the element is contained within the list (from Data.List)
+matchesGuess s (c, Correct) = c `elem` s
+
+-- Determines whether the specified string matches the list of guessed characters
+matchesGuesses :: [GuessChar] -> String -> Bool
+matchesGuesses [] s = True
+matchesGuesses xs s = all (matchesGuess s) xs
+
+-- select n words from the list of possible answers that contain the known letters in the correct place
+getHints :: Int -> Guesses -> [Answer] -> [String]
+getHints n gs pa = take n (filter (matchesGuesses g) pa)
+                   where g = knownResults gs
+
+-- Collates what we know from the results of the guesses thus far into a structure thats more usable
+knownResults :: Guesses -> [GuessChar]
+knownResults [] = []
+knownResults gs = filter (\(_,r) -> r /= None) (nub $ concat gs)
 
 -- Processes the user input character
 processUserInput :: Char -> Game -> Config -> (Bool, Game)

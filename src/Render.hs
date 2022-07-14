@@ -89,25 +89,13 @@ renderInstructions cfg = do
     putStrLn   ""
     putStrLn   "--------------------------------------------------------------------------------------------------"
 
-
-renderHint :: Hint -> IO ()
-renderHint x = do
-    putStr x
-    putStr "  "
-
-renderHints :: Hints -> IO ()
-renderHints xs = do
-    putStr "HINTS:  "
-    mapM_ renderHint xs
-    putStrLn ""
-
--- Renders a 3x3 block at the specified point, with a char in the center, and the specified foreground and background color  
+-- Renders a 5x5 block at the specified point, with a char in the center, and the specified foreground and background color  
 renderBlock :: Point -> Char -> Color -> Color -> IO ()
 renderBlock (x,y) c fg bg = do
     setCursorPosition x y
     putStrWithColor "     " fg bg
     setCursorPosition (x+1) y
-    putStrWithColor [' ', ' ', c, ' ', ' '] fg bg   -- MO TODO: Improve this!
+    putStrWithColor [' ', ' ', c, ' ', ' '] fg bg
     setCursorPosition (x+2) y
     putStrWithColor "     " fg bg
 
@@ -118,15 +106,19 @@ renderGuess p cfg (c, r) = do
     let bg = bgColorForResult cfg r
     renderBlock p c fg bg
 
-renderRow :: Point -> Config -> Guess -> String -> IO ()
-renderRow p cfg [] s = renderRow p cfg emptyGuess s
-renderRow (x,y) cfg g s = do
-    let guesses = take 5 $ g ++ emptyGuess -- ensure we have 5 columns before rendering
-    mapM_ (\(i, gc) -> renderGuess (x, y + i*6) cfg gc) (zip [0..] guesses)     -- using zip with infinite list allows us to use the index in the lambda
+renderRow :: Game -> Config -> Guess -> Point -> String -> IO ()
+renderRow game cfg [] p s = renderRow game cfg emptyGuess p s
+renderRow game cfg g (x,y) s = do
+    let gs = take 5 $ g ++ emptyGuess -- ensure we have 5 columns before rendering
+    mapM_ (\(i, gc) -> renderGuess (x, y + i*6) cfg gc) (zip [0..] gs)     -- using zip with infinite list allows us to use the index in the lambda
     setCursorPosition (x+1) (y+32)
     putStr s -- Displays the help text to the right of the row
-
--- MO TODO: create mapM_withIndex function as I've had to do the zip technique twice
+    when (showHints game && not (null s)) $ do
+        let hints = getHints 5 (guesses game) (possibleAnswers cfg)
+        unless (null hints) $ do
+            setCursorPosition (x+2) (y+32)
+            let hnts = unwords hints
+            putStr ("HINTS: " ++ hnts)
 
 emptyGuess :: Guess
 emptyGuess = replicate 5 (' ', None)
@@ -148,8 +140,7 @@ renderBoard :: Point -> Game -> Config -> IO ()
 renderBoard (x,y) g c = do
     let gc = maxGuesses c
     let gs = take gc (guesses g ++ emptyGuesses gc)         -- Ensure we render enough empty rows for guesses that have not yet been made
-    mapM_ (\(i::Int,guess::Guess) -> renderRow (x+i*4, y) c guess (helpTextForRow g c i)) (zip [0..] gs)
--- MO TODO: create mapM_withIndex function
+    mapM_ (\(i::Int,guess::Guess) -> renderRow g c guess (x+i*4, y) (helpTextForRow g c i)) (zip [0..] gs)
 
 -- Renders the game as per the current game state
 renderGame :: Game -> Config -> IO ()
@@ -160,7 +151,6 @@ renderGame g c = do
     renderBoard (5,10) g c
     setCursorPosition (5 + maxGuesses c * 4) 0
     when (showInstructions g) $ renderInstructions c
-    when (showHints g) $ renderHints (hints g)
     when (showDebug c) $ renderDebug g c
 
 -- Renders the Loading screen at the start of the game
@@ -184,7 +174,6 @@ renderDebug :: Game -> Config -> IO ()
 renderDebug g c = do
     putStrLn $ show g
     putStrLn $ show c
-    {-
     let submittedCount = submittedGuessCount g
     putStrLn $ "SubmittedGuessCount=" ++ show submittedCount
     let isOver = gameOver g c
@@ -197,4 +186,3 @@ renderDebug g c = do
     putStrLn $ "IsWinningGuess=" ++ a
     mapM_ (putStrLn . show . winningGuess a) (guesses g)
     putStrLn $ "CurrentGuessIsValid=" ++ show (currentGuessIsValid c g)
-    -}

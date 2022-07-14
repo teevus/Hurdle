@@ -191,6 +191,14 @@ guessIsValidFalse = TestCase do
     let result = guessIsValid config guess
     assertEqual "guessIsValidFalse" False result
 
+getHintsOneGuess = TestCase do
+    let possibleAnswers = ["CIGAR", "REBUT", "SISSY", "HUMPH", "AWAKE", "BLUSH", "FOCAL", "EVADE", "NAVAL"]
+    let game = initializeGame "AWAKE"
+    let guesses = [[('C', Correct),('R',PartlyCorrect),('Z',Incorrect),('E', Incorrect), ('G', Correct)]]
+    let hints = getHints 5 guesses possibleAnswers
+    assertEqual "getHintsOneGuess count" 1 (length hints)
+    assertEqual "getHintsOneGuess result" "CIGAR" (head hints)
+
 {-  **** ENTRY POINT **** -}
 main :: IO ()
 main = do
@@ -201,7 +209,8 @@ main = do
                                 currentGuessSingle, currentGuessMultiple,
                                 processEnterKeySuccess, processEnterKeyTooShort,
                                 currentGuessIsFinishedTrue, currentGuessIsFinishedFalse,
-                                guessIsValidTrue, guessIsValidFalse])
+                                guessIsValidTrue, guessIsValidFalse,
+                                getHintsOneGuess ])
 
     if errors counts + failures counts == 0 
         then exitSuccess 

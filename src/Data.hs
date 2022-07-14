@@ -10,7 +10,6 @@ module Data (
     Point (..),
     Result (..)
 ) where
-    -- MO TODO: Review exports once its all working
 
 import Control.Monad.State
 import Control.Monad.Reader

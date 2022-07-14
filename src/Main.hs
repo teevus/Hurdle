@@ -6,12 +6,10 @@
 module Main where
 
 import Control.Concurrent
-import Control.Monad.Except -- MO TODO: Not sure if I need this, but its in the snake project
 import Control.Monad.Reader
 import Control.Monad.State
     ( execState, MonadState(put, get), State, StateT(runStateT) )
 import Data.List
--- import Data.List.Split
 import Data.Char
 import System.Console.ANSI
 import System.IO
@@ -22,44 +20,11 @@ import Render
 import Utils
 import Game
 
-
--- Pure functions
-
--- Determines whether the specified string matches the guessed character
-matchesGuess :: String -> GuessChar -> Bool
--- matchesGuess _ (_, None) = False -- I'd prefer an error since this shouldnt ever be passed to this function
-matchesGuess s (c, Incorrect) = c `notElem` s      -- notElem returns True if the element is not contained within the list (from Data.List)
-matchesGuess s (c, PartlyCorrect) = c `elem` s     -- elem return True if the element is contained within the list (from Data.List)
-matchesGuess s (c, Correct) = c `elem` s    -- MO TODO: The index of Correct matches needs to be passed in
-
--- Determines whether the specified string matches the list of guessed characters
-matchesGuesses :: [GuessChar] -> String -> Bool
-matchesGuesses [] s = True
-matchesGuesses xs s = all (matchesGuess s) xs
-
--- select n words from the list of possible answers that contain the known letters in the correct place
--- MO TODO: Ensure this is lazy evaluating so we only retrieve the first n results
-getHints :: Int -> Guesses -> [Answer] -> [String]
-getHints n gs pa = take n (filter (matchesGuesses g) pa)
-                   where g = knownResults gs
-
--- Collates what we know from the results of the guesses thus far into a structure thats more usable
-knownResults :: Guesses -> [GuessChar]
-knownResults [] = []
-knownResults gs = filter (\(_,r) -> r /= None) (nub $ concat gs)
-
-
 -- IO/ Impure functions
 
 -- Randomly chooses some words from the available words that have matching letter positions
 -- For example, we could randomly pick 5 words out of the top 100 matching words
 -- This is so that we have some variability for the player, but also prioritize words with more commonly occuring letters that have not yet been eliminated
-
--- MO TODO: prioritize words that have commonly occuring letters, that have not yet been eliminated 
-randomHints :: Int -> Int -> Guesses -> [Answer] -> IO Hints
-randomHints n nmax g a = do
-    gen <- newStdGen
-    return $ selectRandomItems gen n (getHints nmax g a)
 
 loadPossibleAnswers :: IO [Answer]
 loadPossibleAnswers = do
@@ -79,7 +44,6 @@ selectRandomAnswer xs = do
 -- MAIN
 main :: IO ((), Game)
 main = do
-    -- MO TODO: This is not working properly in windows terminal
     hSetBuffering stdin NoBuffering
     hSetBuffering stdout NoBuffering
 
@@ -122,7 +86,6 @@ playGameM = do
     -- Check if we've reached game over state, and prompt the user whether to play another game if we have
     else if gameOver game config then do
         
-        -- game <- get    -- MO TODO: Is this necessary and does it need to be different to game?
         renderGameM
         playAgain <- liftIO $ renderGameOver game
         when playAgain $ do
