@@ -86,6 +86,7 @@ main = do
     -- MO TODO: This is not working properly in windows terminal
     hSetBuffering stdin NoBuffering
     hSetBuffering stdout NoBuffering
+    hSetEcho stdin False
 
     -- Need some basic config to render the loading screen with the instructions
     let tempConfig = initializeConfig [] []
@@ -137,8 +138,8 @@ processUserInputM = do
         if c == ' ' then toggleHintsM
         else if c == '!' then toggleInstructionsM -- MO TODO: Ideally want to use Ctrl-I, but apparantly there are issues with terminal support 
         else if c `elem` ['a'..'z'] ++ ['A'..'Z'] then addLetterM (toUpper c)
-        else if c == '-' then removeLetterM
-        else return () -- still awaiting further user input  -- MO TODO: Use "when"?
+        else when (c == '-') removeLetterM -- still awaiting further user input  -- MO TODO: Use "when"?
+
     -- MO TODO: Accept backspace character for delete
 
     -- Check if we've reached game over state
@@ -149,16 +150,7 @@ processUserInputM = do
             -- Reset the game state
             answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
             let newGame = initializeGame answer
-            -- MO TODO: How to replace entire state without having to do field by field?
-            put $ newGame 
-{-                      game { 
-                        guesses = guesses newState,
-                        hints = hints newState,
-                        showInstructions = showInstructions newState,
-                        showHints = showInstructions newState,
-                        helpText = helpText newState
-                        -- answer = answer newState
-                        } -}
+            put newGame
             return True
         else
             return False
@@ -182,7 +174,6 @@ addLetterM c = do
     game <- get
     let modifiedGuesses = addLetter game c
     put (game { guesses = modifiedGuesses })
-
 removeLetterM :: MonadState Game m => m ()
 removeLetterM = do
     game <- get
