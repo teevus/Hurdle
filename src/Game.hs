@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use zipWith" #-}
+{-# HLINT ignore "Eta reduce" #-}
 
 {-
 This module contains functions that operate on the Game and related data types such as Guess etc.
@@ -14,16 +15,20 @@ module Game (
     toWord,
     submittedGuessCount,
     currentGuess,
+    currentGuessIndex,
     addLetter,
     removeLetter,
     evaluateGuesses,
     startNextRow,
     isSubmitted,
-    winningGuess
+    winningGuess,
+    initializeConfig,
+    initializeGame
 ) where
 
 import Data
 import Utils 
+import System.Console.ANSI
 
 -- Returns the guesses that have been submitted
 submittedGuesses :: Game -> [Guess]
@@ -105,3 +110,23 @@ evaluateGuessChar a index c
 
 startNextRow :: Game -> Guesses
 startNextRow g = guesses g ++ [[]]
+
+initializeConfig :: [Answer] -> [Answer] -> Config
+initializeConfig vg pa = Config { maxGuesses = 6,
+                                  hintCount = 5,
+                                  foregroundColor = Black,
+                                  backgroundColor = White,
+                                  correctColor = Green,
+                                  partlyCorrectColor = Yellow,
+                                  incorrectColor = Blue,
+                                  validGuesses = vg,
+                                  possibleAnswers = pa,
+                                  showDebug = True }
+
+initializeGame :: Answer -> Game
+initializeGame a = Game { answer = a,
+                          guesses = [[]],      -- a list containing a single empty item 
+                          showInstructions = False,
+                          showHints = False,
+                          hints = [],
+                          helpText = "Enter a 5 letter word (or hit Space to Show/Hide HINTS)" }

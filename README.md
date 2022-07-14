@@ -27,12 +27,19 @@ Hurdle is written in Haskell and requires the Glasgow Haskell Compiler to be ins
 
 The project is a Cabal project and therefore requires Cabal to be installed.  
 
-To build, run the following command in terminal from the project directory:
-cabal build
+The following commands should be run in terminal or other command line interface, from within the project directory.
 
-To run, run the following command in terminal from the project directory:
-cabal run
+To build:
 
+    cabal build
+
+To run unit tests:
+
+    cabal test
+
+To run:
+
+    cabal run Hurdle
 ***
 
 Source available at:

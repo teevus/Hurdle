@@ -80,26 +80,6 @@ selectRandomAnswer xs = do
     gen <- getStdGen
     return $ selectRandomItem gen xs
 
-initializeConfig :: [Answer] -> [Answer] -> Config
-initializeConfig vg pa = Config { maxGuesses = 6,
-                                  hintCount = 5,
-                                  foregroundColor = Black,
-                                  backgroundColor = White,
-                                  correctColor = Green,
-                                  partlyCorrectColor = Yellow,
-                                  incorrectColor = Blue,
-                                  validGuesses = vg,
-                                  possibleAnswers = pa,
-                                  showDebug = True }
-
-initializeGame :: Answer -> Game
-initializeGame a = Game { answer = a,
-                          guesses = [[]],      -- a list containing a single empty item 
-                          showInstructions = False,
-                          showHints = False,
-                          hints = [],
-                          helpText = "Enter a 5 letter word (or hit Space to Show/Hide HINTS)" }
-
 -- MAIN
 main :: IO ((), Game)
 main = do
@@ -168,16 +148,17 @@ processUserInputM = do
         if playAgain then do
             -- Reset the game state
             answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
-            let newState = initializeGame answer
+            let newGame = initializeGame answer
             -- MO TODO: How to replace entire state without having to do field by field?
-            put (game {
+            put $ newGame 
+{-                      game { 
                         guesses = guesses newState,
                         hints = hints newState,
                         showInstructions = showInstructions newState,
                         showHints = showInstructions newState,
                         helpText = helpText newState
                         -- answer = answer newState
-                        })
+                        } -}
             return True
         else
             return False
