@@ -1,14 +1,18 @@
+{-# LANGUAGE ForeignFunctionInterface #-}
+
 module Utils (
     selectRandomItem,
     selectRandomItems,
     showNumberText,
     replaceElem,
-    parseWords
+    parseWords,
+    getHiddenChar
 ) where
 
 import System.Random
 import Data.List
 import Data.Char
+import Foreign.C.Types
 
 -- Selects an item at random from the specified list
 selectRandomItem :: StdGen -> [a] -> a
@@ -52,3 +56,9 @@ replaceElem (x:xs) n a =
 parseWords :: String -> [String]
 parseWords s = map (map toUpper) wrds
     where wrds = map (take 5) (words s)
+
+-- Workaround for the abysmal issues with running in windows console
+-- See https://stackoverflow.com/questions/2983974/haskell-read-input-character-from-console-immediately-not-after-newline
+getHiddenChar = fmap (chr.fromEnum) c_getch
+foreign import ccall unsafe "conio.h getch"
+  c_getch :: IO CInt

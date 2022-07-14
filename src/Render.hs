@@ -25,7 +25,6 @@ import Utils
 -- Returns the foreground color to use for the specified result
 fgColorForResult :: Config -> Result -> Color
 fgColorForResult c _ = backgroundColor c
--- MO TODO: Customize background colors as required
 
 -- Returns the background color to use for the specified result
 bgColorForResult :: Config -> Result -> Color
@@ -176,12 +175,7 @@ renderLoading c b = do
 
 renderGameOver :: Game -> IO Bool
 renderGameOver g = do
-    let winner = wonGame g
-    if winner then
-        putStrLn $ "CONGRATULATIONS: You won in " ++ show (submittedGuessCount g) ++ " attempts!"
-    else
-        putStrLn "BAD LUCK: You lost!"
-
+    putStrLn ""
     putStrLn "Would you like to play again? (Y/N)"
     c <- getChar
     return $ c == 'y' || c == 'Y'
@@ -201,3 +195,4 @@ renderDebug g c = do
     let a = answer g
     putStrLn $ "IsWinningGuess=" ++ a
     mapM_ (putStrLn . show . winningGuess a) (guesses g)
+    putStrLn $ "CurrentGuessIsValid=" ++ show (currentGuessIsValid c g)

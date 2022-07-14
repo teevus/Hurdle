@@ -42,7 +42,7 @@ data Config = Config {
     validGuesses       :: [String], -- The set of words that will be considered valid guesses
     possibleAnswers    :: [Answer], -- The set of words that could be possible answers (a subset of validGuesses)
     showDebug          :: Bool      -- When true, debug values will be displayed during rendering
-} -- deriving Show
+}
 
 instance Show Config where
     show c = "Config {maxGuesses = " ++ show (maxGuesses c) ++
@@ -53,7 +53,8 @@ instance Show Config where
              "        partlyCorrectColor = " ++ show (partlyCorrectColor c) ++
              "        incorrectColor = " ++ show (incorrectColor c) ++
              "        validGuesses count = " ++ show (length $ validGuesses c) ++
-             "        possibleAnswers count = " ++ show (length $ possibleAnswers c)
+             "        possibleAnswers count = " ++ show (length $ possibleAnswers c) ++
+             "        showDebug = " ++ show (showDebug c)
 
 data Game = Game {
     answer           :: Answer,     -- The correct answer
@@ -61,5 +62,6 @@ data Game = Game {
     hints            :: Hints,      -- Hints to display
     showInstructions :: Bool,       -- Whether to display instructions on screen can be toggled on/off by the player
     showHints        :: Bool,       -- Whether to display hints on screen can be toggled on/off by the player
-    helpText         :: String      -- Text on the current row that tells the user what they need to do
-} deriving Show
+    helpText         :: String,     -- Text on the current row that tells the user what they need to do
+    userQuit         :: Bool        -- Indicates that the user has pressed escape to exit the game
+} deriving (Eq, Show)

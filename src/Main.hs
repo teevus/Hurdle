@@ -97,15 +97,51 @@ main = do
     renderLoading config False
     getLine
 
-    runStateT (runReaderT playGame config) game
+    runStateT (runReaderT playGameM config) game
 
 -- This is the main game loop
-playGame :: ReaderT Config (StateT Game IO) ()
-playGame = do
+playGameM :: ReaderT Config (StateT Game IO) ()
+playGameM = do
     renderGameM
-    continue <- processNextM
-    when continue
-        playGame
+    processNextInputM
+
+    game <- get
+    config <- ask
+
+    if userQuit game then do
+        liftIO $ putStrLn "Are you sure you want to QUIT? (Y/N)"
+        liftIO $ hSetEcho stdin False
+        c <- liftIO getHiddenChar
+        liftIO $ hSetEcho stdin True
+        when (toUpper c /= 'Y') $ do
+            put $ game { userQuit = False}
+            playGameM
+
+    else do
+        -- Check if we've reached game over state, and prompt the user whether to play another game if we have
+        when (gameOver game config) $ do
+            if wonGame game then
+                put $ game { helpText = "CONGRATULATIONS: You won in " ++ show (submittedGuessCount game) ++ " attempts!" }
+            else
+                put $ game { helpText = "BAD LUCK: You lost!" }
+
+            game <- get    -- MO TODO: Is this necessary and does it need to be different to game?
+            renderGameM
+            playAgain <- liftIO $ renderGameOver game
+            when playAgain $ do
+                -- Reset the game state
+                answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
+                put $ initializeGame answer
+
+        if currentGuessIsFinished game && not (currentGuessIsSubmitted game) then
+            put $ game { helpText = "Press ENTER to Submit (or press SPACE for Hints)" }
+        else
+            put $ game { helpText = "Enter a 5 letter word (or press SPACE to show Hints)" }    -- MO TODO: Move this helpText stuff into a separate function
+        
+        game <- get
+        when (not (userQuit game) && not (gameOver game config)) $ do
+            playGameM
+
 
 -- This is the main rendering function that gets called each time the game state has changed
 renderGameM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
@@ -115,50 +151,16 @@ renderGameM = do
     liftIO $ renderGame game config
 
 -- Accepts user input, and updates the Game state as required
--- Returns True:  keep playing, 
---         False: The application should exit
-processNextM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m Bool
-processNextM = do
+processNextInputM :: (MonadIO m, MonadReader Config m, MonadState Game m) => m ()
+processNextInputM = do
     game <- get
     config <- ask
-    let currGuess = currentGuess game
-    let guessIsFinished = length currGuess == 5
-    let currGuessIsSubmitted = isSubmitted currGuess
 
-    if guessIsFinished && not currGuessIsSubmitted then do
-        liftIO getLine
-        submitGuessM
-    else do
-        liftIO $ hSetEcho stdin False
-        c <- liftIO getChar
-        liftIO $ hSetEcho stdin True
-        processUserInputM c
+    liftIO $ hSetEcho stdin False
+    c <- liftIO getHiddenChar
+    when (showDebug config) $ liftIO $ putStrLn (show $ fromEnum c)
+    liftIO $ hSetEcho stdin True
 
-    -- Check if we've reached game over state
-    if gameOver game config then do
-        renderGameM
-        playAgain <- liftIO $ renderGameOver game
-        if playAgain then do
-            -- Reset the game state
-            answer <- liftIO $ selectRandomAnswer (possibleAnswers config)
-            let newGame = initializeGame answer
-            put newGame
-            return True
-        else
-            return False
-    else
-        return True
-
-processUserInputM :: (MonadReader Config m, MonadState Game m) => Char -> m ()
-processUserInputM c = do
-    game <- get
-    config <- ask
-    let modifiedGame = processUserInput c game
+    let modifiedGame = processUserInput c game config
     put modifiedGame
 
-submitGuessM :: (MonadReader Config m, MonadState Game m)=> m ()
-submitGuessM = do
-    game <- get
-    config <- ask
-    let modifiedGame = startNextRow (evaluateGuesses game) config  -- MO TODO: Use functional composition to make the intent clearer    
-    put modifiedGame

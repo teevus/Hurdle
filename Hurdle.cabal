@@ -87,3 +87,7 @@ executable Hurdle
 
     -- Base language which the package is written in.
     default-language: Haskell2010
+
+    -- Enable RTS opts -- RTS options can be specified when running the application using cabal run Hurdle +RTS (option) syntax
+    -- ghc-options: -rtsopts
+

@@ -20,11 +20,17 @@ module Game (
     removeLetter,
     evaluateGuesses,
     startNextRow,
-    isSubmitted,
+    guessIsSubmitted,
     winningGuess,
     initializeConfig,
     initializeGame,
-    processUserInput
+    processUserInput,
+    submitGuess,
+    currentGuessIsValid,
+    guessIsFinished,
+    currentGuessIsFinished,
+    currentGuessIsSubmitted,
+    processEnterKey
 ) where
 
 import System.Console.ANSI
@@ -52,12 +58,12 @@ initializeGame a = Game { answer = a,
                           showInstructions = False,
                           showHints = False,
                           hints = [],
-                          helpText = "Enter a 5 letter word (or hit Space to show HINTS)" }
-
+                          helpText = "Enter a 5 letter word (or press SPACE to show Hints)",
+                          userQuit = False }
 
 -- Returns the guesses that have been submitted
 submittedGuesses :: Game -> [Guess]
-submittedGuesses g = filter isSubmitted (guesses g)
+submittedGuesses g = filter guessIsSubmitted (guesses g)
 
 -- Retrieves the number of guesses that have been submitted
 submittedGuessCount :: Game -> Int
@@ -72,8 +78,12 @@ currentGuess :: Game -> Guess
 currentGuess g = last $ guesses g
 
 -- Determines whether a particular guess has been submitted
-isSubmitted :: Guess -> Bool
-isSubmitted g = length g == 5 && all (\(_,r) -> r /= None) g
+guessIsSubmitted :: Guess -> Bool
+guessIsSubmitted g = guessIsFinished g && all (\(_,r) -> r /= None) g
+
+-- Determine whether the current guess has been submitted
+currentGuessIsSubmitted :: Game -> Bool
+currentGuessIsSubmitted g = guessIsSubmitted (currentGuess g)
 
 -- Determines whether the game is finished (i.e. maximum number of guesses have been submitted)
 -- This will return true if the game is finished regardless of whether the game was won or lost
@@ -132,17 +142,46 @@ evaluateGuessChar a index c
     | c `elem` a       = (c,PartlyCorrect)
     | otherwise        = (c,Incorrect)
 
+-- Submits the guess, which evaluates it, and if its a valid guess, will start a new row 
+submitGuess :: Game -> Config -> Game
+submitGuess game cfg = if currentGuessIsValid cfg game then
+                        startNextRow (evaluateGuesses game) cfg
+                  else game { helpText = "You have entered an invalid word!" }
+
+-- Checks if the guess is a valid one using the list of valid words
+guessIsValid :: Config -> Guess -> Bool
+guessIsValid c g = toWord g `elem` validGuesses c
+
+currentGuessIsValid :: Config -> Game -> Bool
+currentGuessIsValid c g =  guessIsValid c (currentGuess g)
+
+guessIsFinished :: Guess -> Bool
+guessIsFinished g = length g == 5
+
+currentGuessIsFinished :: Game -> Bool
+currentGuessIsFinished g = guessIsFinished (currentGuess g)
+
 -- Starts a new row on the board (if its not already at gameOver state)
 startNextRow :: Game -> Config -> Game
 startNextRow game cfg
     | gameOver game cfg = game -- Do nothing
     | otherwise = game { guesses = guesses game ++ [[]] }
 
-processUserInput :: Char -> Game -> Game
-processUserInput c game
-  | c == ' '  = game { showHints = not $ showHints game }
-  | c == '!'  = game { showInstructions = not $ showInstructions game }
-  | c `elem` ['a'..'z'] || c `elem` ['A'..'Z'] = addLetter game (toUpper c)
-  | c == '-'  = removeLetter game
-  | otherwise = game
-        -- MO TODO: How to accept backspace character for delete? Ctrl characters for toggle hints/instructions
+-- Processes the user input character
+processUserInput :: Char -> Game -> Config -> Game
+processUserInput c game cfg
+  | c == ' '               = game { showHints = not $ showHints game }
+  | c == '+'               = game { showInstructions = not $ showInstructions game }
+  | c `elem` ['a'..'z'] || 
+    c `elem` ['A'..'Z']    = addLetter game (toUpper c)     -- Valid letter
+  | fromEnum c == 8        = removeLetter game              -- Backspace
+  | fromEnum c == 13       = processEnterKey game cfg       -- Enter
+  | fromEnum c == 27       = game { userQuit = True }       -- Esc
+  | otherwise              = game
+
+-- Processes the enter key being pressed
+processEnterKey :: Game -> Config -> Game
+processEnterKey game cfg =
+    if currentGuessIsFinished game && not (currentGuessIsSubmitted game) then
+        submitGuess game cfg
+    else game
