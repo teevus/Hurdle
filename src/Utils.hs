@@ -46,9 +46,9 @@ replaceElem :: [a] -> Int -> a -> [a]
 replaceElem [] _ _ = []
 replaceElem (_:xs) 0 a = a:xs
 replaceElem (x:xs) n a =
-    if n < 0 then (x:xs) else (x : replaceElem xs (n-1) a)
+    if n < 0 then x:xs else x : replaceElem xs (n-1) a
 
--- Parses the string to seperate the individual 5 letter words
+-- Parses the string to seperate the individual 5-letter words
 parseWords :: String -> [String]
 parseWords s = map (map toUpper) wrds
     where wrds = map (take 5) (words s)
