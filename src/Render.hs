@@ -89,7 +89,7 @@ renderInstructions cfg = do
     putStrLn   ""
     putStrLn   "--------------------------------------------------------------------------------------------------"
 
--- Renders a 5x5 block at the specified point, with a char in the center, and the specified foreground and background color  
+-- Renders a 3x5 block at the specified point, with a char in the center, and the specified foreground and background color  
 renderBlock :: Point -> Char -> Color -> Color -> IO ()
 renderBlock (x,y) c fg bg = do
     setCursorPosition x y

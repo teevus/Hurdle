@@ -29,7 +29,8 @@ import Game
 loadPossibleAnswers :: IO [Answer]
 loadPossibleAnswers = do
     contents <- readFile "data/solutions.txt"
-    return $ parseWords contents
+    gen <- getStdGen
+    return $ shuffle gen $ parseWords contents
 
 loadValidGuesses :: IO [Answer]
 loadValidGuesses = do
@@ -51,6 +52,7 @@ main = do
     let tempConfig = initializeConfig [] []
     renderLoading tempConfig True
 
+    gen <- getStdGen
     possibleAnswers <- loadPossibleAnswers
     answer <- selectRandomAnswer possibleAnswers
     validGuesses <- loadValidGuesses

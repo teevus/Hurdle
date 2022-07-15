@@ -17,9 +17,14 @@ import Test.HUnit
       Test(TestCase),
       Testable(test) )
 import System.Exit
+import System.IO
+import System.Random
+import Data.List
+-- import System.Exit
+import Debug.Trace
 import Data
 import Game
-import Debug.Trace
+import Utils
 
 
 -- wonGame tests
@@ -79,13 +84,13 @@ toWordEmpty = TestCase do
     let guess = createGuessFromAnswer "" None
 
     let result = toWord guess
-    assertEqual "toWordEmpty" "" result 
+    assertEqual "toWordEmpty" "" result
 
 toWordSuccess = TestCase do
     let guess = createGuessFromAnswer "TESTS" None
 
     let result = toWord guess
-    assertEqual "toWordEmpty" "TESTS" result 
+    assertEqual "toWordEmpty" "TESTS" result
 
 -- submittedGuesses tests
 submittedGuessesNone = TestCase do
@@ -116,7 +121,7 @@ currentGuessSingle = TestCase do
     let guess = createGuessFromAnswer "BURTL" None
     let guesses = [ guess ]
     let game = initializeGameWithGuesses "WORDL" guesses
-    
+
     let result = currentGuess game
     assertEqual "currentGuessFirst" guess result
     assertEqual "currentGuessIndex 0" (currentGuessIndex game) 0
@@ -124,10 +129,10 @@ currentGuessSingle = TestCase do
 currentGuessMultiple = TestCase do
     let lastGuess = createGuessFromAnswer "HURTS" None
     let guesses = [ createGuessFromAnswer "AB" Incorrect,
-                    createGuessFromAnswer "" PartlyCorrect, 
+                    createGuessFromAnswer "" PartlyCorrect,
                     lastGuess ]
     let game = initializeGameWithGuesses "WORDL" guesses
-    
+
     let result = currentGuess game
     assertEqual "currentGuessLast" lastGuess result
     assertEqual "currentGuessIndex 2" (currentGuessIndex game) 2
@@ -181,13 +186,13 @@ currentGuessIsFinishedFalse = TestCase do
 
 guessIsValidTrue = TestCase do
     let config = initializeConfig ["TESTS", "TORTS"] ["TARTS", "TORTS"]
-    let guess = createGuessFromAnswer "TORTS" None 
+    let guess = createGuessFromAnswer "TORTS" None
     let result = guessIsValid config guess
     assertEqual "guessIsValidTrue" True result
 
 guessIsValidFalse = TestCase do
     let config = initializeConfig ["TESTS", "TORTS"] ["TESTS", "TORTS"]
-    let guess = createGuessFromAnswer "TOAST" None 
+    let guess = createGuessFromAnswer "TOAST" None
     let result = guessIsValid config guess
     assertEqual "guessIsValidFalse" False result
 
@@ -199,29 +204,57 @@ getHintsOneGuess = TestCase do
     assertEqual "getHintsOneGuess count" 1 (length hints)
     assertEqual "getHintsOneGuess result" "CIGAR" (head hints)
 
+shuffleTen = TestCase do
+    let values = [1..10]
+    gen <- getStdGen
+
+    let result = shuffle gen values
+    assertEqual "shuffleTen length" 10 (length result) 
+    assertEqual "shuffleTen eq" True (values == sort result)
+    traceIO $ show result
+
+shuffleEmpty = TestCase do
+    gen <- getStdGen
+    assertEqual "shuffleEmpty" True (null (shuffle gen []))
+
+selectRandomItemsFive = TestCase do
+    gen <- getStdGen
+    let result = selectRandomItems gen 5 [1..10]
+    assertEqual "selectRandomItemsFive" 5 (length result)
+    traceIO $ show result
+
+selectRandomItemsEmpty = TestCase do
+    gen <- getStdGen 
+    
+    let result = selectRandomItems gen 0 [1..10]
+    assertEqual "selectRandomItemsEmpty" 0 (length result)
+
 {-  **** ENTRY POINT **** -}
 main :: IO ()
 main = do
     counts <- runTestTT (test [ wonGameWithNoGuesses, wonGameWithIncorrectGuess, wonGameWithCorrectGuess, wonGameNotSubmitted,
                                 winningGuessWithIncorrectGuess, winningGuessWithEmptyGuess, winningGuessWithCorrectGuess,
-                                toWordEmpty, toWordSuccess, 
+                                toWordEmpty, toWordSuccess,
                                 submittedGuessesNone, submittedGuessesMultiple,
                                 currentGuessSingle, currentGuessMultiple,
                                 processEnterKeySuccess, processEnterKeyTooShort,
                                 currentGuessIsFinishedTrue, currentGuessIsFinishedFalse,
                                 guessIsValidTrue, guessIsValidFalse,
-                                getHintsOneGuess ])
+                                getHintsOneGuess,
+                                shuffleTen, shuffleEmpty,
+                                selectRandomItemsEmpty, selectRandomItemsFive]) 
 
-    if errors counts + failures counts == 0 
-        then exitSuccess 
+    if errors counts + failures counts == 0
+        then exitSuccess
         else exitFailure
 
 
 -- Utility functions for creating test data
 createGuessFromAnswer :: String -> Result -> Guess
-createGuessFromAnswer xs r = 
+createGuessFromAnswer xs r =
     map (\c -> (c,r)) xs
 
 initializeGameWithGuesses :: Answer -> Guesses -> Game
 initializeGameWithGuesses a gs = game { guesses = gs }
     where game = initializeGame a
+

@@ -6,7 +6,8 @@ module Utils (
     showNumberText,
     replaceElem,
     parseWords,
-    getHiddenChar
+    getHiddenChar,
+    shuffle
 ) where
 
 import System.Random
@@ -16,14 +17,15 @@ import Foreign.C.Types
 
 -- Selects an item at random from the specified list
 selectRandomItem :: StdGen -> [a] -> a
-selectRandomItem gen xs = xs !! rand 
-    where (rand, _) = randomR (0, length xs - 1) gen 
+selectRandomItem gen xs = xs !! rand
+    where (rand, _) = randomR (0, length xs - 1) gen
 
 -- Selects n items at random from the specified list
 selectRandomItems :: StdGen -> Int -> [a] -> [a]
 selectRandomItems _ _ [] = []
 selectRandomItems _ 0 _ = []
-selectRandomItems gen n xs = [xs!!i | i <- take n . nub $ (randomRs (1,length xs) gen :: [Int])] 
+selectRandomItems gen n xs = [xs!!i | i <- take n . nub $ (randomRs (0,length xs - 1) gen :: [Int])]
+
 -- Notes:
 -- nub removes duplicate items from the list of indexes we have selected at random
 -- we use list comprehension to select by index.  This may not be very efficient for larger lists since each use of !! is O(n)
@@ -62,3 +64,16 @@ parseWords s = map (map toUpper) wrds
 getHiddenChar = fmap (chr.fromEnum) c_getch
 foreign import ccall unsafe "conio.h getch"
   c_getch :: IO CInt
+
+-- Reorder the list using the list of integers 
+-- (Untested: this is from https://stackoverflow.com/questions/14692059/how-to-shuffle-a-list)
+reorder :: [Int] -> [a] -> [a]
+reorder [] _ = []
+reorder _ [] = []
+reorder (i:is) xs = let (firsts, rest) = splitAt (i `mod` length xs) xs
+                    in head rest : reorder is (firsts ++ tail rest)
+
+-- Randomly shuffles the list
+shuffle :: StdGen -> [a] -> [a]
+shuffle gen xs = reorder rands xs
+                 where  rands = randomRs (1,length xs) gen
